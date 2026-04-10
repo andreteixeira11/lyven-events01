@@ -12,6 +12,7 @@ import { Stack } from 'expo-router';
 import { Sun, Moon, Smartphone, Check } from 'lucide-react-native';
 import { useTheme, Theme } from '@/hooks/theme-context';
 import * as Haptics from 'expo-haptics';
+import { StatusBar } from 'expo-status-bar';
 
 export default function ThemeSettingsScreen() {
   const { theme, changeTheme, colors, isDark } = useTheme();
@@ -46,6 +47,7 @@ export default function ThemeSettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack.Screen 
         options={{ 
           title: 'Tema da Aplicação',
@@ -71,8 +73,10 @@ export default function ThemeSettingsScreen() {
                   style={[
                     styles.optionCard,
                     { 
-                      backgroundColor: colors.card,
-                      borderColor: isSelected ? colors.primary : colors.border,
+                      backgroundColor: isSelected 
+                        ? (isDark ? `${colors.primary}25` : `${colors.primary}10`)
+                        : colors.card,
+                      borderColor: isSelected ? colors.primary : (isDark ? colors.border : colors.borderLight),
                       borderWidth: isSelected ? 2 : 1,
                     }
                   ]}
@@ -85,8 +89,8 @@ export default function ThemeSettingsScreen() {
                         styles.iconContainer,
                         {
                           backgroundColor: isSelected
-                            ? `${colors.primary}20`
-                            : colors.background,
+                            ? `${colors.primary}30`
+                            : (isDark ? colors.cardElevated : colors.background),
                         },
                       ]}
                     >
@@ -113,14 +117,14 @@ export default function ThemeSettingsScreen() {
                       styles.optionLabel,
                       {
                         color: isSelected ? colors.primary : colors.text,
-                        fontWeight: isSelected ? 'bold' : '600',
+                        fontWeight: isSelected ? ('bold' as const) : ('600' as const),
                       },
                     ]}
                   >
                     {item.label}
                   </Text>
                   <Text
-                    style={[styles.optionDescription, { color: colors.textSecondary }]}
+                    style={[styles.optionDescription, { color: isDark ? colors.textLight : colors.textSecondary }]}
                   >
                     {item.description}
                   </Text>

@@ -405,8 +405,8 @@ const styles = StyleSheet.create({
   iconWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 60,
-    height: 45,
+    width: 64,
+    height: 50,
   },
   iconContainer: {
     alignItems: 'center',
@@ -420,9 +420,9 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   glowEffect: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     opacity: 0.15,
     ...Platform.select({
       ios: {

@@ -124,7 +124,7 @@ export default function FavoritesScreen() {
           headerTintColor: colors.text,
         }} 
       />
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Upcoming Events */}
         {upcomingEvents.length > 0 && (
           <View style={styles.section}>
@@ -290,6 +290,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold' as const,
     color: '#fff',
+  },
+  scrollContent: {
+    paddingTop: 8,
+    paddingBottom: 20,
   },
   section: {
     padding: 16,

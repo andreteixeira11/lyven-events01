@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StyleSheet, LogBox, Platform, View, Text } from "react-native";
+import { StatusBar } from 'expo-status-bar';
 import { CartProvider } from "@/hooks/cart-context";
 import { UserProvider } from "@/hooks/user-context";
 import { FavoritesContext } from "@/hooks/favorites-context";
@@ -147,6 +148,11 @@ const styles = StyleSheet.create({
   },
 });
 
+function ThemedStatusBar() {
+  const { isDark } = useTheme();
+  return <StatusBar style={isDark ? 'light' : 'dark'} />;
+}
+
 function GlobalErrorHandler({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -202,6 +208,7 @@ export default function RootLayout() {
                             <SafeProvider Provider={SocialProvider}>
                               <SafeProvider Provider={CartProvider}>
                                 <GestureHandlerRootView style={styles.container}>
+                                  <ThemedStatusBar />
                                   <RootLayoutNav />
                                 </GestureHandlerRootView>
                               </SafeProvider>

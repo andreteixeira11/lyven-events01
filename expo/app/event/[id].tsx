@@ -632,7 +632,7 @@ export default function EventDetailScreen() {
         <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
           <View style={styles.footerInfo}>
             <Text style={[styles.footerTickets, { color: colors.textSecondary }]}>{getTotalTickets()} ingresso(s)</Text>
-            <Text style={[styles.footerPrice, { color: colors.primary }]}>€{getTotalPrice()}</Text>
+            <Text style={[styles.footerPrice, { color: colors.primary }]}>€{getTotalPrice().toFixed(2)}</Text>
           </View>
           <TouchableOpacity 
             style={[styles.addToCartButton, { backgroundColor: colors.primary }]}
@@ -706,9 +706,9 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 10 : 16,
-    marginTop: 10,
   },
   headerButton: {
     width: moderateScale(40),
@@ -1045,7 +1045,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

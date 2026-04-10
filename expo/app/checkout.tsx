@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, TextInput, Modal, Platform, Animated, Image } from "react-native";
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, TextInput, Modal, Platform, Animated, Image, KeyboardAvoidingView } from "react-native";
 import { useCart } from "@/hooks/cart-context";
 import { router, Stack } from "expo-router";
 import { api } from "@/lib/api";
@@ -62,7 +62,19 @@ export default function CheckoutScreen() {
   const formatExpiry = (text: string) => {
     const cleaned = text.replace(/\D/g, '');
     if (cleaned.length >= 2) {
-      return cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4);
+      let month = parseInt(cleaned.slice(0, 2), 10);
+      if (month > 12) month = 12;
+      if (month < 1 && cleaned.slice(0, 2) !== '0' && cleaned.length >= 2) month = 1;
+      const monthStr = month.toString().padStart(2, '0');
+      if (cleaned.length > 2) {
+        const currentYear = new Date().getFullYear() % 100;
+        let year = parseInt(cleaned.slice(2, 4), 10);
+        if (cleaned.slice(2, 4).length === 2 && year < currentYear) {
+          year = currentYear;
+        }
+        return monthStr + '/' + (cleaned.slice(2, 4).length === 2 ? year.toString().padStart(2, '0') : cleaned.slice(2, 4));
+      }
+      return monthStr + '/';
     }
     return cleaned;
   };
@@ -78,6 +90,19 @@ export default function CheckoutScreen() {
     }
     if (cardExpiry.length !== 5) {
       Alert.alert('Erro', 'Data de validade inválida');
+      return false;
+    }
+    const [monthStr, yearStr] = cardExpiry.split('/');
+    const month = parseInt(monthStr, 10);
+    const year = parseInt(yearStr, 10);
+    const currentYear = new Date().getFullYear() % 100;
+    const currentMonth = new Date().getMonth() + 1;
+    if (month < 1 || month > 12) {
+      Alert.alert('Erro', 'Mês de validade inválido (01-12)');
+      return false;
+    }
+    if (year < currentYear || (year === currentYear && month < currentMonth)) {
+      Alert.alert('Erro', 'Cartão expirado. Verifique a data de validade.');
       return false;
     }
     if (cardCvv.length < 3) {
@@ -373,7 +398,23 @@ export default function CheckoutScreen() {
                       <Text style={[styles.quantityText, { color: colors.text }]}>{item.quantity}</Text>
                       <TouchableOpacity 
                         style={[styles.quantityButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-                        onPress={() => updateQuantity(item.eventId, item.ticketTypeId, item.quantity + 1)}
+                        onPress={() => {
+                          const ticketType = getTicketType(item.eventId, item.ticketTypeId);
+                          const maxAllowed = ticketType?.maxPerPerson || 10;
+                          const maxAvailable = ticketType?.available || 10;
+                          const limit = Math.min(maxAllowed, maxAvailable);
+                          if (item.quantity < limit) {
+                            updateQuantity(item.eventId, item.ticketTypeId, item.quantity + 1);
+                          } else {
+                            Alert.alert('Limite atingido', `Máximo de ${limit} bilhetes deste tipo.`);
+                          }
+                        }}
+                        disabled={(() => {
+                          const ticketType = getTicketType(item.eventId, item.ticketTypeId);
+                          const maxAllowed = ticketType?.maxPerPerson || 10;
+                          const maxAvailable = ticketType?.available || 10;
+                          return item.quantity >= Math.min(maxAllowed, maxAvailable);
+                        })()}
                       >
                         <Plus size={14} color={colors.text} />
                       </TouchableOpacity>
@@ -697,15 +738,22 @@ export default function CheckoutScreen() {
       
       {renderStepIndicator()}
 
-      <ScrollView 
-        style={styles.scrollView} 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
-        {currentStep === 'review' && renderReviewStep()}
-        {currentStep === 'payment' && renderPaymentStep()}
-        {currentStep === 'confirm' && renderConfirmStep()}
-      </ScrollView>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {currentStep === 'review' && renderReviewStep()}
+          {currentStep === 'payment' && renderPaymentStep()}
+          {currentStep === 'confirm' && renderConfirmStep()}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {cartItems.length > 0 && (
         <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
@@ -1202,7 +1250,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    paddingBottom: Platform.OS === 'ios' ? 30 : SPACING.lg,
     borderTopWidth: 1,
   },
   footerPrice: {

@@ -40,6 +40,7 @@ import {
   SlidersHorizontal,
   Compass,
   Star,
+  Check,
 } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
 import { useTheme } from '@/hooks/theme-context';
@@ -163,7 +164,7 @@ function NormalUserSearchContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [priceFilter, setPriceFilter] = useState<PriceFilter>('all');
-  const [cityFilter, setCityFilter] = useState<string>('Todas');
+  const [cityFilters, setCityFilters] = useState<string[]>([]);
   const [showCityPicker, setShowCityPicker] = useState(false);
   const nearbyRadius = 50;
   const filterSlideAnim = useRef(new Animated.Value(0)).current;
@@ -173,9 +174,9 @@ function NormalUserSearchContent() {
     let count = 0;
     if (dateFilter !== 'all') count++;
     if (priceFilter !== 'all') count++;
-    if (cityFilter !== 'Todas') count++;
+    if (cityFilters.length > 0) count++;
     return count;
-  }, [dateFilter, priceFilter, cityFilter]);
+  }, [dateFilter, priceFilter, cityFilters]);
 
   useEffect(() => {
     Animated.spring(filterSlideAnim, {
@@ -314,14 +315,14 @@ function NormalUserSearchContent() {
       });
     }
 
-    if (cityFilter !== 'Todas') {
+    if (cityFilters.length > 0) {
       events = events.filter(e =>
-        e.venue?.city?.toLowerCase().includes(cityFilter.toLowerCase())
+        cityFilters.some(city => e.venue?.city?.toLowerCase().includes(city.toLowerCase()))
       );
     }
 
     return events;
-  }, [baseEvents, dateFilter, priceFilter, cityFilter]);
+  }, [baseEvents, dateFilter, priceFilter, cityFilters]);
 
   const nearbyEvents: Event[] = useMemo(() => {
     if (!location) return [];
@@ -366,7 +367,7 @@ function NormalUserSearchContent() {
   const clearFilters = useCallback(() => {
     setDateFilter('all');
     setPriceFilter('all');
-    setCityFilter('Todas');
+    setCityFilters([]);
   }, []);
 
   const { data: adsData } = api.advertisements.list.useQuery({ active: true });
@@ -691,11 +692,25 @@ function NormalUserSearchContent() {
               onPress={() => setShowCityPicker(true)}
             >
               <MapPin size={14} color={colors.primary} />
-              <Text style={[s.cityPickerText, { color: cityFilter === 'Todas' ? colors.textSecondary : colors.text }]}>
-                {cityFilter}
+              <Text style={[s.cityPickerText, { color: cityFilters.length === 0 ? colors.textSecondary : colors.text }]} numberOfLines={1}>
+                {cityFilters.length === 0 ? 'Todas as cidades' : cityFilters.join(', ')}
               </Text>
               <ChevronDown size={14} color={colors.textSecondary} />
             </TouchableOpacity>
+            {cityFilters.length > 0 && (
+              <View style={s.selectedCitiesRow}>
+                {cityFilters.map(city => (
+                  <TouchableOpacity
+                    key={city}
+                    style={[s.selectedCityChip, { backgroundColor: colors.primary + '18', borderColor: colors.primary }]}
+                    onPress={() => setCityFilters(prev => prev.filter(c => c !== city))}
+                  >
+                    <Text style={[s.selectedCityChipText, { color: colors.primary }]}>{city}</Text>
+                    <X size={12} color={colors.primary} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           {activeFilterCount > 0 && (
@@ -963,43 +978,69 @@ function NormalUserSearchContent() {
         <View style={s.modalOverlay}>
           <View style={[s.modalContent, { backgroundColor: colors.card }]}>
             <View style={s.modalHeader}>
-              <Text style={[s.modalTitle, { color: colors.text }]}>Selecionar cidade</Text>
+              <Text style={[s.modalTitle, { color: colors.text }]}>Selecionar cidades</Text>
               <TouchableOpacity onPress={() => setShowCityPicker(false)}>
                 <X size={22} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {PORTUGAL_CITIES.map(city => (
-                <TouchableOpacity
-                  key={city}
-                  style={[
-                    s.cityOption,
-                    { borderBottomColor: colors.border },
-                    cityFilter === city && { backgroundColor: colors.primary + '12' },
-                  ]}
-                  onPress={() => {
-                    setCityFilter(city);
-                    setShowCityPicker(false);
-                  }}
-                >
-                  <MapPin size={16} color={cityFilter === city ? colors.primary : colors.textSecondary} />
-                  <Text
-                    style={[
-                      s.cityOptionText,
-                      { color: colors.text },
-                      cityFilter === city && { color: colors.primary, fontWeight: '700' as const },
-                    ]}
-                  >
-                    {city}
-                  </Text>
-                  {cityFilter === city && (
-                    <View style={[s.cityCheckMark, { backgroundColor: colors.primary }]}>
-                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' as const }}>✓</Text>
-                    </View>
-                  )}
+            {cityFilters.length > 0 && (
+              <View style={s.modalSelectedInfo}>
+                <Text style={[s.modalSelectedText, { color: colors.primary }]}>
+                  {cityFilters.length} {cityFilters.length === 1 ? 'cidade selecionada' : 'cidades selecionadas'}
+                </Text>
+                <TouchableOpacity onPress={() => setCityFilters([])}>
+                  <Text style={[s.modalClearText, { color: colors.error }]}>Limpar</Text>
                 </TouchableOpacity>
-              ))}
+              </View>
+            )}
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {PORTUGAL_CITIES.filter(c => c !== 'Todas').map(city => {
+                const isSelected = cityFilters.includes(city);
+                return (
+                  <TouchableOpacity
+                    key={city}
+                    style={[
+                      s.cityOption,
+                      { borderBottomColor: colors.border },
+                      isSelected && { backgroundColor: colors.primary + '12' },
+                    ]}
+                    onPress={() => {
+                      setCityFilters(prev =>
+                        isSelected
+                          ? prev.filter(c => c !== city)
+                          : [...prev, city]
+                      );
+                    }}
+                  >
+                    <View style={[
+                      s.cityCheckbox,
+                      { borderColor: isSelected ? colors.primary : colors.border },
+                      isSelected && { backgroundColor: colors.primary },
+                    ]}>
+                      {isSelected && <Check size={12} color="#fff" strokeWidth={3} />}
+                    </View>
+                    <MapPin size={16} color={isSelected ? colors.primary : colors.textSecondary} />
+                    <Text
+                      style={[
+                        s.cityOptionText,
+                        { color: colors.text },
+                        isSelected && { color: colors.primary, fontWeight: '700' as const },
+                      ]}
+                    >
+                      {city}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
+            <View style={[s.modalFooter, { borderTopColor: colors.border }]}>
+              <TouchableOpacity
+                style={[s.modalConfirmBtn, { backgroundColor: colors.primary }]}
+                onPress={() => setShowCityPicker(false)}
+              >
+                <Text style={s.modalConfirmText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1721,7 +1762,16 @@ const s = StyleSheet.create({
   modalTitle: { fontSize: 17, fontWeight: '700' as const },
   cityOption: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: 1, gap: 12 },
   cityOptionText: { fontSize: 15, flex: 1 },
-  cityCheckMark: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  cityCheckbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  selectedCitiesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  selectedCityChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, borderWidth: 1, gap: 4 },
+  selectedCityChipText: { fontSize: 12, fontWeight: '600' as const },
+  modalSelectedInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  modalSelectedText: { fontSize: 13, fontWeight: '600' as const },
+  modalClearText: { fontSize: 13, fontWeight: '600' as const },
+  modalFooter: { paddingHorizontal: 18, paddingTop: 12, borderTopWidth: 1 },
+  modalConfirmBtn: { paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  modalConfirmText: { color: '#fff', fontSize: 16, fontWeight: '600' as const },
 });
 
 const styles = StyleSheet.create({
