@@ -90,9 +90,19 @@ type ViewMode = 'list' | 'map';
 type DateFilter = 'all' | 'today' | 'week' | 'month';
 type PriceFilter = 'all' | 'free' | 'under20' | 'under50' | 'over50';
 
-const PORTUGAL_CITIES = [
-  'Todas', 'Lisboa', 'Porto', 'Braga', 'Coimbra', 'Faro', 'Aveiro',
-  'Setúbal', 'Évora', 'Leiria', 'Viseu', 'Funchal', 'Ponta Delgada',
+const MADEIRA_MUNICIPALITIES = [
+  'Todas',
+  'Funchal',
+  'Câmara de Lobos',
+  'Machico',
+  'Santa Cruz',
+  'Santana',
+  'São Vicente',
+  'Porto Santo',
+  'Ribeira Brava',
+  'Calheta',
+  'Ponta do Sol',
+  'Porto Moniz',
 ];
 
 function useUserLocation() {
@@ -994,7 +1004,7 @@ function NormalUserSearchContent() {
               </View>
             )}
             <ScrollView showsVerticalScrollIndicator={false}>
-              {PORTUGAL_CITIES.filter(c => c !== 'Todas').map(city => {
+              {MADEIRA_MUNICIPALITIES.filter(c => c !== 'Todas').map(city => {
                 const isSelected = cityFilters.includes(city);
                 return (
                   <TouchableOpacity

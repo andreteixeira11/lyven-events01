@@ -74,10 +74,10 @@ export default function ThemeSettingsScreen() {
                     styles.optionCard,
                     { 
                       backgroundColor: isSelected 
-                        ? (isDark ? `${colors.primary}25` : `${colors.primary}10`)
-                        : colors.card,
-                      borderColor: isSelected ? colors.primary : (isDark ? colors.border : colors.borderLight),
-                      borderWidth: isSelected ? 2 : 1,
+                        ? (isDark ? `${colors.primary}40` : `${colors.primary}10`)
+                        : (isDark ? colors.cardElevated : colors.card),
+                      borderColor: isSelected ? colors.primary : (isDark ? '#444' : colors.borderLight),
+                      borderWidth: isSelected ? 2.5 : 1,
                     }
                   ]}
                   onPress={() => handleThemeChange(item.value)}
@@ -89,14 +89,14 @@ export default function ThemeSettingsScreen() {
                         styles.iconContainer,
                         {
                           backgroundColor: isSelected
-                            ? `${colors.primary}30`
-                            : (isDark ? colors.cardElevated : colors.background),
+                            ? (isDark ? `${colors.primary}50` : `${colors.primary}30`)
+                            : (isDark ? '#333' : colors.background),
                         },
                       ]}
                     >
                       <Icon
                         size={24}
-                        color={isSelected ? colors.primary : colors.textSecondary}
+                        color={isSelected ? colors.primary : (isDark ? '#bbb' : colors.textSecondary)}
                       />
                     </View>
 
@@ -124,7 +124,7 @@ export default function ThemeSettingsScreen() {
                     {item.label}
                   </Text>
                   <Text
-                    style={[styles.optionDescription, { color: isDark ? colors.textLight : colors.textSecondary }]}
+                    style={[styles.optionDescription, { color: isDark ? '#aaa' : colors.textSecondary }]}
                   >
                     {item.description}
                   </Text>

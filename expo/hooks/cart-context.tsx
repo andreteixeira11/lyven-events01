@@ -65,7 +65,7 @@ export const [CartProvider, useCart] = createContextHook<CartContextType>(() => 
       if (existingItem) {
         return prev.map(i =>
           i.eventId === item.eventId && i.ticketTypeId === item.ticketTypeId
-            ? { ...i, quantity: i.quantity + item.quantity }
+            ? { ...i, quantity: item.quantity, price: item.price }
             : i
         );
       }

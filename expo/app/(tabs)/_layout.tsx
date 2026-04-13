@@ -94,7 +94,7 @@ export default function TabLayout() {
 
     const translateY = slideAnim.interpolate({
       inputRange: [0, 1],
-      outputRange: [0, -3],
+      outputRange: [0, -2],
     });
 
     return (
@@ -124,7 +124,7 @@ export default function TabLayout() {
             },
           ]}
         >
-          <Icon size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
+          <Icon size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
           {children}
         </Animated.View>
       </View>
@@ -405,8 +405,8 @@ const styles = StyleSheet.create({
   iconWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 64,
-    height: 50,
+    width: 56,
+    height: 44,
   },
   iconContainer: {
     alignItems: 'center',
@@ -420,21 +420,21 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   glowEffect: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    opacity: 0.15,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    opacity: 0.12,
     ...Platform.select({
       ios: {
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 12,
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
       },
       android: {
-        elevation: 8,
+        elevation: 6,
       },
       web: {
-        boxShadow: '0 0 20px rgba(0, 153, 168, 0.4)',
+        boxShadow: '0 0 16px rgba(0, 153, 168, 0.3)',
       },
     }),
   },

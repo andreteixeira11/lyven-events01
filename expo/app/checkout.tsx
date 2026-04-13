@@ -399,9 +399,9 @@ export default function CheckoutScreen() {
                       <TouchableOpacity 
                         style={[styles.quantityButton, { backgroundColor: colors.background, borderColor: colors.border }]}
                         onPress={() => {
-                          const ticketType = getTicketType(item.eventId, item.ticketTypeId);
-                          const maxAllowed = ticketType?.maxPerPerson || 10;
-                          const maxAvailable = ticketType?.available || 10;
+                          const tt = getTicketType(item.eventId, item.ticketTypeId);
+                          const maxAllowed = tt?.maxPerPerson ?? 4;
+                          const maxAvailable = tt?.available ?? maxAllowed;
                           const limit = Math.min(maxAllowed, maxAvailable);
                           if (item.quantity < limit) {
                             updateQuantity(item.eventId, item.ticketTypeId, item.quantity + 1);
@@ -410,9 +410,9 @@ export default function CheckoutScreen() {
                           }
                         }}
                         disabled={(() => {
-                          const ticketType = getTicketType(item.eventId, item.ticketTypeId);
-                          const maxAllowed = ticketType?.maxPerPerson || 10;
-                          const maxAvailable = ticketType?.available || 10;
+                          const tt = getTicketType(item.eventId, item.ticketTypeId);
+                          const maxAllowed = tt?.maxPerPerson ?? 4;
+                          const maxAvailable = tt?.available ?? maxAllowed;
                           return item.quantity >= Math.min(maxAllowed, maxAvailable);
                         })()}
                       >

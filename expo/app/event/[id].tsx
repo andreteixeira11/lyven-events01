@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 10 : 16,
+    paddingTop: Platform.OS === 'web' ? 16 : 0,
   },
   headerButton: {
     width: moderateScale(40),

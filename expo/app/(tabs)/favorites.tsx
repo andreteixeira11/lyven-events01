@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   scrollContent: {
-    paddingTop: 8,
+    paddingTop: 16,
     paddingBottom: 20,
   },
   section: {
