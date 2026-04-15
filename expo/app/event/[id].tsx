@@ -173,7 +173,10 @@ export default function EventDetailScreen() {
           eventId: event.id,
           ticketTypeId: ticketId,
           quantity,
-          price: ticket.price
+          price: ticket.price,
+          eventTitle: event.title,
+          eventImage: event.image,
+          ticketTypeName: ticket.name,
         });
       }
     });

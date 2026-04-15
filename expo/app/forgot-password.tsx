@@ -13,12 +13,14 @@ import {
 } from 'react-native';
 import { Mail, Check } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { COLORS } from '@/constants/colors';
+import { COLORS, RADIUS, SPACING, SHADOWS } from '@/constants/colors';
+import { useTheme } from '@/hooks/theme-context';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const { colors } = useTheme();
 
   const handleResetPassword = async () => {
     if (!email.trim()) {
@@ -58,30 +60,30 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.gradient}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.gradient, { backgroundColor: colors.background }]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <View style={styles.header}>
-              <View style={styles.iconContainer}>
-                <Mail size={40} color={COLORS.primary} />
+              <View style={[styles.iconContainer, { borderColor: colors.primary }]}>
+                <Mail size={40} color={colors.primary} />
               </View>
-              <Text style={styles.title}>Recuperar Palavra-passe</Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.title, { color: colors.text }]}>Recuperar Palavra-passe</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 Insira o seu email e enviaremos um link para redefinir a sua palavra-passe
               </Text>
             </View>
 
             <View style={styles.form}>
-              <View style={styles.inputContainer}>
-                <Mail size={20} color="#666" style={styles.inputIcon} />
+              <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Mail size={20} color={colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.text }]}
                   placeholder="Email"
-                  placeholderTextColor="#666"
+                  placeholderTextColor={colors.textSecondary}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -97,12 +99,13 @@ export default function ForgotPasswordScreen() {
               <TouchableOpacity
                 style={[
                   styles.button,
+                  { backgroundColor: colors.primary },
                   (isLoading || emailSent) && styles.buttonDisabled,
                 ]}
                 onPress={handleResetPassword}
                 disabled={isLoading || emailSent}
               >
-                <Text style={styles.buttonText}>
+                <Text style={[styles.buttonText, { color: colors.white }]}>
                   {isLoading ? 'Enviando...' : emailSent ? 'Email Enviado' : 'Enviar Link'}
                 </Text>
               </TouchableOpacity>
@@ -120,7 +123,7 @@ export default function ForgotPasswordScreen() {
                 style={styles.backToLoginButton}
                 onPress={() => router.back()}
               >
-                <Text style={styles.backToLoginText}>Voltar ao login</Text>
+                <Text style={[styles.backToLoginText, { color: colors.primary }]}>Voltar ao login</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -136,42 +139,37 @@ const styles = StyleSheet.create({
   },
   gradient: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 20,
-    paddingTop: 20,
+    justifyContent: 'center',
+    padding: SPACING.xl,
   },
   header: {
     alignItems: 'center',
     marginBottom: 50,
-    marginTop: 20,
   },
   iconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: COLORS.white,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: COLORS.primary,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold' as const,
-    color: COLORS.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
-    color: '#666',
     textAlign: 'center',
     paddingHorizontal: 20,
     lineHeight: 22,
@@ -182,39 +180,37 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    marginBottom: 24,
-    paddingHorizontal: 16,
+    borderRadius: RADIUS.full,
+    marginBottom: SPACING.xxl,
+    paddingHorizontal: SPACING.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    ...SHADOWS.sm,
   },
   inputIcon: {
-    marginRight: 12,
+    marginRight: SPACING.md,
   },
   input: {
     flex: 1,
-    height: 50,
-    color: COLORS.text,
+    height: 52,
     fontSize: 16,
-  },
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
+  } as any,
   checkIcon: {
     marginLeft: 8,
   },
   button: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    height: 50,
+    borderRadius: RADIUS.full,
+    height: 52,
     justifyContent: 'center',
     alignItems: 'center',
+    ...SHADOWS.md,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: COLORS.white,
     fontSize: 16,
-    fontWeight: 'bold' as const,
+    fontWeight: '600' as const,
   },
   successBox: {
     flexDirection: 'row',
@@ -234,11 +230,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   backToLoginButton: {
-    marginTop: 30,
+    marginTop: SPACING.xxxl,
     alignItems: 'center',
   },
   backToLoginText: {
-    color: COLORS.primary,
     fontSize: 15,
     fontWeight: '600' as const,
   },
