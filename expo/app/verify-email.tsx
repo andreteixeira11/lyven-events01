@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: COLORS.primary,
-    borderRadius: 12,
+    borderRadius: 9999,
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',

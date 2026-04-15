@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.full,
     padding: SPACING.lg,
     marginTop: SPACING.xxl,
     gap: SPACING.sm,

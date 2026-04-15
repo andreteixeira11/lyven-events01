@@ -727,7 +727,7 @@ const styles = StyleSheet.create({
   },
   createButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 14, marginBottom: 15, gap: 8,
+    backgroundColor: COLORS.primary, borderRadius: 9999, paddingVertical: 14, marginBottom: 15, gap: 8,
   },
   createButtonText: { color: COLORS.white, fontSize: 16, fontWeight: 'bold' as const },
   statsRow: { flexDirection: 'row', marginBottom: 15, gap: 8 },
@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 10, color: COLORS.textSecondary },
   searchContainer: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white,
-    borderRadius: 12, paddingHorizontal: 15, paddingVertical: 12, gap: 10, marginBottom: 15,
+    borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 12, gap: 10, marginBottom: 15,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2,
   },
   searchInput: { flex: 1, fontSize: 16, color: COLORS.text },
@@ -781,7 +781,7 @@ const styles = StyleSheet.create({
   modalContent: { flex: 1, padding: 20 },
   fieldLabel: { fontSize: 14, fontWeight: '600' as const, color: COLORS.text, marginBottom: 8, marginTop: 12 },
   modalInput: {
-    backgroundColor: COLORS.white, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+    backgroundColor: COLORS.white, borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 14,
     fontSize: 16, color: COLORS.text, borderWidth: 1, borderColor: COLORS.border, marginBottom: 4,
   },
   imagePreviewContainer: { position: 'relative', borderRadius: 12, overflow: 'hidden', marginBottom: 8 },
@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
   dividerText: { fontSize: 13, color: COLORS.textSecondary, marginHorizontal: 12 },
   selector: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: COLORS.white, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+    backgroundColor: COLORS.white, borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 14,
     borderWidth: 1, borderColor: COLORS.border, marginBottom: 4,
   },
   selectorText: { fontSize: 16, color: COLORS.text },
@@ -820,7 +820,7 @@ const styles = StyleSheet.create({
   pickerItemSizeActive: { color: COLORS.primary },
   submitBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 16, marginTop: 20, gap: 8,
+    backgroundColor: COLORS.primary, borderRadius: 9999, paddingVertical: 16, marginTop: 20, gap: 8,
   },
   submitBtnDisabled: { opacity: 0.6 },
   submitBtnText: { color: COLORS.white, fontSize: 16, fontWeight: 'bold' as const },

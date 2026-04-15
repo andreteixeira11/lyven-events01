@@ -1005,7 +1005,7 @@ const styles = StyleSheet.create({
   dateTimeRow: { flexDirection: 'row', gap: 10 },
   submitButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 16, marginTop: 24, gap: 8,
+    backgroundColor: COLORS.primary, borderRadius: 9999, paddingVertical: 16, marginTop: 24, gap: 8,
   },
   submitButtonText: { color: COLORS.white, fontSize: 16, fontWeight: 'bold' as const },
   imagePreviewContainer: {
@@ -1119,7 +1119,7 @@ const styles = StyleSheet.create({
   },
   detailActionBtn: {
     flex: 1, flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'center' as const,
-    paddingVertical: 14, borderRadius: 12, gap: 8,
+    paddingVertical: 14, borderRadius: 9999, gap: 8,
   },
   detailActionBtnText: {
     color: COLORS.white, fontSize: 16, fontWeight: 'bold' as const,

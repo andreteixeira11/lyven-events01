@@ -900,7 +900,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 9999,
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
   modalButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 9999,
     alignItems: 'center',
   },
   modalButtonText: {

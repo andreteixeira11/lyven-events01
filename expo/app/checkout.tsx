@@ -948,7 +948,7 @@ const styles = StyleSheet.create({
   browseButton: {
     paddingHorizontal: SPACING.xxl,
     paddingVertical: SPACING.md,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.full,
   },
   browseButtonText: {
     fontSize: 16,
@@ -1117,7 +1117,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   input: {
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.full,
     padding: 14,
     fontSize: 16,
     borderWidth: 1,
@@ -1272,7 +1272,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.full,
     gap: 4,
     ...SHADOWS.md,
   },
@@ -1322,7 +1322,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     paddingHorizontal: SPACING.xxl,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.full,
     gap: SPACING.sm,
     width: '100%',
   },
@@ -1390,7 +1390,7 @@ const styles = StyleSheet.create({
   },
   multibancoButton: {
     paddingVertical: 14,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.full,
     alignItems: 'center',
     ...SHADOWS.md,
   },

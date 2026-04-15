@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 12,
+    borderRadius: 9999,
     backgroundColor: '#fff',
   },
   imageModeButtonActive: {
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 12,
+    borderRadius: 9999,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,

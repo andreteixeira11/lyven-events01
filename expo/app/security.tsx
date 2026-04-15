@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.background,
-    borderRadius: 12,
+    borderRadius: 9999,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: COLORS.primary,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 9999,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

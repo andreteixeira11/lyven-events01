@@ -619,7 +619,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 9999,
     gap: 8,
   },
   checkoutButtonText: {
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: 9999,
     gap: 10,
   },
   walletButtonText: {

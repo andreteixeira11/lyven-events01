@@ -193,12 +193,12 @@ const styles = StyleSheet.create({
   searchContainer: { flexDirection: 'row', marginBottom: 15, gap: 10 },
   searchInputContainer: {
     flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white,
-    borderRadius: 12, paddingHorizontal: 15, paddingVertical: 12, gap: 10,
+    borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 12, gap: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
   },
   searchInput: { flex: 1, fontSize: 16, color: COLORS.text },
   filterButton: {
-    backgroundColor: COLORS.white, borderRadius: 12, padding: 12, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: COLORS.white, borderRadius: 9999, padding: 12, justifyContent: 'center', alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
   },
   filterOptions: { flexDirection: 'row', marginBottom: 15, gap: 10, flexWrap: 'wrap' },
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   promoterActionButtons: { flexDirection: 'row', gap: 10, marginTop: 10 },
   actionButton: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 10, borderRadius: 8, gap: 6,
+    paddingVertical: 10, borderRadius: 9999, gap: 6,
   },
   actionButtonText: { color: COLORS.white, fontSize: 14, fontWeight: 'bold' as const },
   emptyState: { alignItems: 'center', paddingVertical: 40 },

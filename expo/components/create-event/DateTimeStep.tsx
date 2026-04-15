@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 9999,
     borderWidth: 2,
     borderColor: '#0099a8',
     backgroundColor: '#fff',

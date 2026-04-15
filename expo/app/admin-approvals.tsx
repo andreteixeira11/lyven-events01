@@ -328,12 +328,12 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 20, fontWeight: 'bold' as const, color: COLORS.text, marginBottom: 4 },
   statLabel: { fontSize: 11, color: COLORS.textSecondary, textAlign: 'center' as const },
   tabsContainer: {
-    flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 12, padding: 4, marginBottom: 15,
+    flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 9999, padding: 4, marginBottom: 15,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
   },
   tab: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 12, paddingHorizontal: 8, borderRadius: 8, gap: 6,
+    paddingVertical: 12, paddingHorizontal: 8, borderRadius: 9999, gap: 6,
   },
   activeTab: { backgroundColor: COLORS.primary },
   tabText: { fontSize: 13, fontWeight: '600' as const, color: COLORS.textSecondary },
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   actionButtons: { flexDirection: 'row', gap: 10 },
   actionButton: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 12, borderRadius: 8, gap: 8,
+    paddingVertical: 12, borderRadius: 9999, gap: 8,
   },
   rejectButton: { backgroundColor: COLORS.error },
   approveButton: { backgroundColor: COLORS.success },

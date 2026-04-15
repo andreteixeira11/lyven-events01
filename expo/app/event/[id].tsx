@@ -1073,7 +1073,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0099a8',
     paddingHorizontal: 24,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 9999,
   },
   addToCartText: {
     color: '#fff',

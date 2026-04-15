@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0099a8',
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: 9999,
     gap: 8,
   },
   createButtonText: {

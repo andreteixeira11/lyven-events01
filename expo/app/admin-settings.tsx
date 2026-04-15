@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 15,
-    borderRadius: 12,
+    borderRadius: 9999,
     gap: 10,
   },
   saveButtonText: {
@@ -619,7 +619,7 @@ const styles = StyleSheet.create({
   textInput: {
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 8,
+    borderRadius: 9999,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 16,
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
   numberInput: {
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 8,
+    borderRadius: 9999,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 16,
@@ -656,7 +656,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 9999,
     gap: 10,
     backgroundColor: COLORS.primary,
   },

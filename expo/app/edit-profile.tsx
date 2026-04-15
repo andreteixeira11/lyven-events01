@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: COLORS.card,
-    borderRadius: 12,
+    borderRadius: 9999,
     padding: 16,
     fontSize: 16,
     color: COLORS.black,
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: COLORS.primary,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 9999,
     marginHorizontal: 20,
     marginTop: 12,
     alignItems: 'center',

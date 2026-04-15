@@ -811,7 +811,7 @@ const styles = StyleSheet.create({
   },
   noteInput: {
     backgroundColor: '#f5f5f5',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     fontSize: 16,
     color: '#000',
@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
   },
   addNoteButton: {
     backgroundColor: '#0099a8',
-    borderRadius: 12,
+    borderRadius: 9999,
     padding: 16,
     alignItems: 'center',
   },

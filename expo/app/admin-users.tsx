@@ -424,12 +424,12 @@ const styles = StyleSheet.create({
   searchContainer: { flexDirection: 'row', marginBottom: 15, gap: 10 },
   searchInputContainer: {
     flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white,
-    borderRadius: 12, paddingHorizontal: 15, paddingVertical: 12, gap: 10,
+    borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 12, gap: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
   },
   searchInput: { flex: 1, fontSize: 16, color: COLORS.text },
   filterButton: {
-    backgroundColor: COLORS.white, borderRadius: 12, padding: 12, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: COLORS.white, borderRadius: 9999, padding: 12, justifyContent: 'center', alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
   },
   filterOptions: { flexDirection: 'row', marginBottom: 15, gap: 10 },
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   userActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, gap: 4,
+    paddingVertical: 8, paddingHorizontal: 12, borderRadius: 9999, gap: 4,
   },
   actionBtnText: { color: COLORS.white, fontSize: 12, fontWeight: 'bold' as const },
   emptyState: { alignItems: 'center', paddingVertical: 40 },
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
   modalInfoValue: { fontSize: 15, color: COLORS.text, fontWeight: '500' as const },
   modalActionBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 14, borderRadius: 12, gap: 8, marginBottom: 10,
+    paddingVertical: 14, borderRadius: 9999, gap: 8, marginBottom: 10,
   },
   modalActionBtnText: {
     color: COLORS.white, fontSize: 16, fontWeight: 'bold' as const,

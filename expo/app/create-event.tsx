@@ -860,7 +860,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     backgroundColor: '#f0f0f0',
-    borderRadius: 12,
+    borderRadius: 9999,
     gap: 4,
   },
   backButtonText: {
@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     backgroundColor: '#0099a8',
-    borderRadius: 12,
+    borderRadius: 9999,
     gap: 4,
   },
   nextButtonDisabled: {
@@ -918,7 +918,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 2,
@@ -984,7 +984,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: 9999,
     marginTop: 12,
     gap: 8,
   },
@@ -1047,7 +1047,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f0f0f0',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 9999,
     alignItems: 'center',
   },
   cancelModalButtonSecondaryText: {
@@ -1059,7 +1059,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ff3b30',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 9999,
     alignItems: 'center',
   },
   cancelModalButtonPrimaryText: {

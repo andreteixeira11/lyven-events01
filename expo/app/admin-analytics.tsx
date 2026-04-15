@@ -220,10 +220,10 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   content: { padding: 20 },
   periodSelector: {
-    flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 12, padding: 4, marginBottom: 20,
+    flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 9999, padding: 4, marginBottom: 20,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
   },
-  periodButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
+  periodButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 9999 },
   periodButtonActive: { backgroundColor: COLORS.primary },
   periodButtonText: { fontSize: 14, color: COLORS.textSecondary, fontWeight: '500' as const },
   periodButtonTextActive: { color: COLORS.white, fontWeight: 'bold' as const },

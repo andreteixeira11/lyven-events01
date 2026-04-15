@@ -1152,7 +1152,7 @@ const styles = StyleSheet.create({
   },
   doneButton: {
     backgroundColor: COLORS.primary,
-    borderRadius: 12,
+    borderRadius: 9999,
     padding: 16,
     alignItems: 'center',
     width: '100%',

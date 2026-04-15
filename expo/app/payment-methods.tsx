@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
     gap: 8,
     margin: 20,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 9999,
   },
   addButtonText: {
     color: '#fff',
@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 9999,
     borderWidth: 1,
     minWidth: '48%',
   },
@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   input: {
-    borderRadius: 12,
+    borderRadius: 9999,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
@@ -791,7 +791,7 @@ const styles = StyleSheet.create({
   saveButton: {
     margin: 20,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 9999,
     alignItems: 'center',
   },
   saveButtonDisabled: {
