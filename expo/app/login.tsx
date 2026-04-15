@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.full,
     height: 56,
     borderWidth: 1.5,
     gap: SPACING.sm,
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.full,
     marginBottom: SPACING.lg,
     paddingHorizontal: SPACING.lg,
     borderWidth: 1,
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
   } as any,
   button: {
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.full,
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
