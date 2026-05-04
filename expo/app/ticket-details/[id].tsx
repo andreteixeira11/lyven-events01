@@ -31,6 +31,7 @@ import {
   Wallet
 } from 'lucide-react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/theme-context';
 import QRCode from '@/components/QRCode';
 
@@ -68,6 +69,7 @@ const mockTickets: Ticket[] = [
 export default function TicketDetailsScreen() {
   const { id } = useLocalSearchParams();
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [transferModalVisible, setTransferModalVisible] = useState(false);
@@ -303,7 +305,7 @@ export default function TicketDetailsScreen() {
       />
       
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.background, paddingTop: insets.top + 8 }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
             <ArrowLeft size={24} color={colors.text} />
           </TouchableOpacity>
@@ -663,8 +665,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
+    paddingBottom: 12,
     zIndex: 10,
   },
   headerButton: {

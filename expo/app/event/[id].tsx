@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, ScrollView, Image, TouchableOpacity, SafeAreaView, Platform, Alert, ActionSheetIOS } from "react-native";
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import { Calendar, MapPin, ChevronLeft, Share2, Heart, Bell, Clock, Instagram, Facebook, Globe, UserPlus } from "lucide-react-native";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { handleError } from "@/lib/error-handler";
 import { LoadingSpinner, ErrorState } from "@/components/LoadingStates";
@@ -15,8 +15,6 @@ import { useTheme } from '@/hooks/theme-context';
 import { hp, responsiveFontSize, responsiveSpacing, moderateScale } from '@/utils/responsive-styles';
 import { SocialProof } from '@/components/SocialProof';
 import { FOMOAlert } from '@/components/FOMOAlert';
-import AdBanner from '@/components/AdBanner';
-import { Advertisement } from '@/types/event';
 
 
 export default function EventDetailScreen() {
@@ -28,36 +26,6 @@ export default function EventDetailScreen() {
   
   const [selectedTickets, setSelectedTickets] = useState<{ [key: string]: number }>({});
   const [isLiked, setIsLiked] = useState(false);
-
-  const { data: adsData } = api.advertisements.list.useQuery({ active: true });
-
-  const activeAds: Advertisement[] = useMemo(() => {
-    const adsList = (adsData as any)?.ads || (Array.isArray(adsData) ? adsData : []);
-    console.log('[EventDetail] ads loaded:', adsList?.length);
-    if (!adsList || !Array.isArray(adsList) || adsList.length === 0) return [];
-    const now = new Date();
-    return adsList
-      .filter((ad: any) => {
-        const startDate = new Date(ad.start_date || ad.startDate || 0);
-        const endDate = new Date(ad.end_date || ad.endDate || Date.now() + 365 * 86400000);
-        return startDate <= now && endDate >= now;
-      })
-      .map((ad: any) => ({
-        id: ad.id,
-        title: ad.title || '',
-        description: ad.description || '',
-        image: ad.image || ad.image_url || '',
-        targetUrl: ad.target_url || ad.targetUrl,
-        type: ad.type || 'card',
-        position: ad.position || 'event_detail',
-        isActive: true,
-        startDate: new Date(ad.start_date || ad.startDate || Date.now()),
-        endDate: new Date(ad.end_date || ad.endDate || Date.now()),
-        impressions: ad.impressions || 0,
-        clicks: ad.clicks || 0,
-        budget: ad.budget || 0,
-      })) as Advertisement[];
-  }, [adsData]);
 
   const { 
     data: eventData, 
@@ -565,12 +533,6 @@ export default function EventDetailScreen() {
             </View>
           )}
           
-          {activeAds.length > 0 && (
-            <View style={{ marginBottom: 16 }}>
-              <AdBanner advertisement={activeAds[0]} />
-            </View>
-          )}
-
           {/* Description */}
           <View style={styles.descriptionSection}>
             <Text style={[styles.sectionTitle, { color: colors.primary }]}>Sobre o Evento</Text>

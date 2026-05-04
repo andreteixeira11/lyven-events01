@@ -166,10 +166,10 @@ const styles = StyleSheet.create({
   bannerContainer: {
     position: 'relative',
     marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 12,
+    marginVertical: 6,
+    borderRadius: 10,
     overflow: 'hidden',
-    height: 120
+    height: 80
   },
   bannerContent: {
     flex: 1,
@@ -184,20 +184,20 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    padding: 12
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    padding: 8
   },
   bannerTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
     color: '#fff',
-    marginBottom: 4
+    marginBottom: 2
   },
   bannerDescription: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#fff',
     opacity: 0.9,
-    marginBottom: 8
+    marginBottom: 4
   },
   bannerAction: {
     flexDirection: 'row',
@@ -248,11 +248,11 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flexDirection: 'row',
-    padding: 12
+    padding: 10
   },
   cardImage: {
-    width: 80,
-    height: 80,
+    width: 56,
+    height: 56,
     borderRadius: 8
   },
   cardInfo: {
@@ -261,16 +261,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 4
+    marginBottom: 2
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 11,
     color: '#666',
-    marginBottom: 8,
-    lineHeight: 20
+    marginBottom: 4,
+    lineHeight: 14
   },
   cardAction: {
     flexDirection: 'row',

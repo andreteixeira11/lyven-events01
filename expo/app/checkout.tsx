@@ -1251,20 +1251,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.lg,
-    paddingBottom: Platform.OS === 'ios' ? 30 : SPACING.lg,
+    paddingVertical: SPACING.md,
+    paddingBottom: Platform.OS === 'ios' ? 28 : SPACING.md,
     borderTopWidth: 1,
+    gap: SPACING.md,
   },
   footerPrice: {
-    marginRight: SPACING.lg,
+    justifyContent: 'center',
+    minWidth: 90,
   },
   footerLabel: {
-    fontSize: 12,
+    fontSize: 11,
     marginBottom: 2,
   },
   footerTotal: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700' as const,
+    lineHeight: 24,
   },
   footerButton: {
     flex: 1,

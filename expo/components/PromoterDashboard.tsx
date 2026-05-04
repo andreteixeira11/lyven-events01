@@ -22,6 +22,7 @@ import {
 import { Image } from 'react-native';
 import { router } from 'expo-router';
 import { useUser } from '@/hooks/user-context';
+import { useTheme } from '@/hooks/theme-context';
 import { api } from '@/lib/api';
 
 interface PromoterDashboardProps {
@@ -32,6 +33,7 @@ const { width } = Dimensions.get('window');
 
 const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _promoterId }) => {
   const { user, promoterProfile } = useUser();
+  const { colors, isDark } = useTheme();
 
   const { data: profileByUser } = api.promoters.getByUserId.useQuery(
     { userId: user?.id ?? '' },
@@ -62,7 +64,7 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
     { enabled: !!resolvedPromoterId }
   );
 
-  const [refreshing, setRefreshing] = React.useState(false);
+  const [refreshing, setRefreshing] = React.useState<boolean>(false);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -107,15 +109,21 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
     return new Intl.NumberFormat('pt-PT').format(value);
   };
 
+  const surfaceBg = isDark ? colors.cardElevated : '#f8f9fa';
+
   const renderStatCard = (title: string, value: string, icon: React.ReactNode, onPress?: () => void) => (
-    <TouchableOpacity style={styles.statCard} onPress={onPress} activeOpacity={onPress ? 0.7 : 1}>
+    <TouchableOpacity
+      style={[styles.statCard, { backgroundColor: colors.card, shadowColor: isDark ? '#000' : '#000' }]}
+      onPress={onPress}
+      activeOpacity={onPress ? 0.7 : 1}
+    >
       <View style={styles.statHeader}>
         <View style={styles.statIcon}>
           {icon}
         </View>
-        <Text style={styles.statTitle}>{title}</Text>
+        <Text style={[styles.statTitle, { color: colors.textSecondary }]}>{title}</Text>
       </View>
-      <Text style={styles.statValue}>{value}</Text>
+      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
     </TouchableOpacity>
   );
 
@@ -125,25 +133,25 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
 
   if (isLoading && !events.length) {
     return (
-      <View style={[styles.wrapper, styles.centered]}>
-        <ActivityIndicator size="large" color="#0099a8" />
-        <Text style={styles.loadingText}>A carregar dashboard...</Text>
+      <View style={[styles.wrapper, styles.centered, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>A carregar dashboard...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { backgroundColor: colors.background }]}>
       <ScrollView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0099a8" colors={['#0099a8']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
         }
       >
         <View style={styles.welcomeContainer}>
-          <Text style={styles.welcomeText}>Bem-vindo, {user?.name || 'Promotor'}</Text>
-          <Text style={styles.welcomeSubtext}>
+          <Text style={[styles.welcomeText, { color: colors.text }]}>Bem-vindo, {user?.name || 'Promotor'}</Text>
+          <Text style={[styles.welcomeSubtext, { color: colors.textSecondary }]}>
             {resolvedPromoterId ? `${events.length} evento(s) criados` : 'A carregar perfil...'}
           </Text>
         </View>
@@ -152,83 +160,83 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
           {renderStatCard(
             'Receita Total',
             formatCurrency(stats.totalRevenue),
-            <Euro size={20} color="#0099a8" />
+            <Euro size={20} color={colors.primary} />
           )}
           {renderStatCard(
             'Bilhetes Vendidos',
             formatNumber(stats.totalTicketsSold),
-            <Ticket size={20} color="#0099a8" />
+            <Ticket size={20} color={colors.primary} />
           )}
           {renderStatCard(
             'Seguidores',
             formatNumber(stats.followersCount),
-            <Users size={20} color="#0099a8" />
+            <Users size={20} color={colors.primary} />
           )}
           {renderStatCard(
             'Eventos Próximos',
             String(upcomingEvents.length),
-            <Calendar size={20} color="#0099a8" />,
+            <Calendar size={20} color={colors.primary} />,
             () => router.push('/(tabs)/promoter-events' as any)
           )}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Resumo</Text>
-          <View style={styles.summaryCard}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Resumo</Text>
+          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Total de Eventos</Text>
-              <Text style={styles.summaryValue}>{stats.totalEvents}</Text>
+              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total de Eventos</Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>{stats.totalEvents}</Text>
             </View>
-            <View style={styles.summaryDivider} />
+            <View style={[styles.summaryDivider, { backgroundColor: colors.borderLight }]} />
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Eventos Próximos</Text>
-              <Text style={styles.summaryValue}>{upcomingEvents.length}</Text>
+              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Eventos Próximos</Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>{upcomingEvents.length}</Text>
             </View>
-            <View style={styles.summaryDivider} />
+            <View style={[styles.summaryDivider, { backgroundColor: colors.borderLight }]} />
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Eventos Passados</Text>
-              <Text style={styles.summaryValue}>{pastEvents.length}</Text>
+              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Eventos Passados</Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>{pastEvents.length}</Text>
             </View>
-            <View style={styles.summaryDivider} />
+            <View style={[styles.summaryDivider, { backgroundColor: colors.borderLight }]} />
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Bilhetes Vendidos</Text>
-              <Text style={[styles.summaryValue, { color: '#0099a8' }]}>{stats.totalTicketsSold}</Text>
+              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Bilhetes Vendidos</Text>
+              <Text style={[styles.summaryValue, { color: colors.primary }]}>{stats.totalTicketsSold}</Text>
             </View>
           </View>
         </View>
 
         {ads.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Anúncios</Text>
-            <View style={styles.adsCard}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Anúncios</Text>
+            <View style={[styles.adsCard, { backgroundColor: colors.card }]}>
               <View style={styles.adsStatsGrid}>
-                <View style={styles.adsStat}>
+                <View style={[styles.adsStat, { backgroundColor: surfaceBg }]}>
                   <View style={styles.adsStatIconContainer}>
-                    <Target size={22} color="#0099a8" />
+                    <Target size={22} color={colors.primary} />
                   </View>
-                  <Text style={styles.adsStatValue}>{activeAds.length}</Text>
-                  <Text style={styles.adsStatLabel}>Ativos</Text>
+                  <Text style={[styles.adsStatValue, { color: colors.text }]}>{activeAds.length}</Text>
+                  <Text style={[styles.adsStatLabel, { color: colors.textSecondary }]}>Ativos</Text>
                 </View>
-                <View style={styles.adsStat}>
+                <View style={[styles.adsStat, { backgroundColor: surfaceBg }]}>
                   <View style={styles.adsStatIconContainer}>
-                    <Eye size={22} color="#0099a8" />
+                    <Eye size={22} color={colors.primary} />
                   </View>
-                  <Text style={styles.adsStatValue}>{formatNumber(totalImpressions)}</Text>
-                  <Text style={styles.adsStatLabel}>Impressões</Text>
+                  <Text style={[styles.adsStatValue, { color: colors.text }]}>{formatNumber(totalImpressions)}</Text>
+                  <Text style={[styles.adsStatLabel, { color: colors.textSecondary }]}>Impressões</Text>
                 </View>
-                <View style={styles.adsStat}>
+                <View style={[styles.adsStat, { backgroundColor: surfaceBg }]}>
                   <View style={styles.adsStatIconContainer}>
-                    <TrendingUp size={22} color="#0099a8" />
+                    <TrendingUp size={22} color={colors.primary} />
                   </View>
-                  <Text style={styles.adsStatValue}>{formatNumber(totalClicks)}</Text>
-                  <Text style={styles.adsStatLabel}>Cliques</Text>
+                  <Text style={[styles.adsStatValue, { color: colors.text }]}>{formatNumber(totalClicks)}</Text>
+                  <Text style={[styles.adsStatLabel, { color: colors.textSecondary }]}>Cliques</Text>
                 </View>
-                <View style={styles.adsStat}>
+                <View style={[styles.adsStat, { backgroundColor: surfaceBg }]}>
                   <View style={styles.adsStatIconContainer}>
-                    <Euro size={22} color="#0099a8" />
+                    <Euro size={22} color={colors.primary} />
                   </View>
-                  <Text style={styles.adsStatValue}>{formatCurrency(totalAdSpend)}</Text>
-                  <Text style={styles.adsStatLabel}>Investido</Text>
+                  <Text style={[styles.adsStatValue, { color: colors.text }]}>{formatCurrency(totalAdSpend)}</Text>
+                  <Text style={[styles.adsStatLabel, { color: colors.textSecondary }]}>Investido</Text>
                 </View>
               </View>
             </View>
@@ -237,9 +245,9 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
 
         {nextEvent && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Próximo Evento</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Próximo Evento</Text>
             <TouchableOpacity
-              style={styles.nextEventCard}
+              style={[styles.nextEventCard, { backgroundColor: colors.card }]}
               onPress={() => router.push(`/promoter-event/${(nextEvent as any).id}` as any)}
               activeOpacity={0.7}
             >
@@ -250,10 +258,10 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
                 </View>
               ) : null}
               <View style={styles.nextEventContent}>
-                <Text style={styles.nextEventTitle} numberOfLines={1}>{(nextEvent as any).title}</Text>
+                <Text style={[styles.nextEventTitle, { color: colors.text }]} numberOfLines={1}>{(nextEvent as any).title}</Text>
                 <View style={styles.nextEventRow}>
-                  <Calendar size={14} color="#0099a8" />
-                  <Text style={styles.nextEventText}>
+                  <Calendar size={14} color={colors.primary} />
+                  <Text style={[styles.nextEventText, { color: colors.textSecondary }]}>
                     {new Date((nextEvent as any).date).toLocaleDateString('pt-PT', {
                       day: 'numeric',
                       month: 'long',
@@ -268,8 +276,8 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
                 </View>
                 {(nextEvent as any).venue?.name && (
                   <View style={styles.nextEventRow}>
-                    <Target size={14} color="#888" />
-                    <Text style={styles.nextEventText}>{(nextEvent as any).venue.name}</Text>
+                    <Target size={14} color={colors.textSecondary} />
+                    <Text style={[styles.nextEventText, { color: colors.textSecondary }]}>{(nextEvent as any).venue.name}</Text>
                   </View>
                 )}
               </View>
@@ -278,14 +286,14 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
         )}
 
         {events.length === 0 && !isLoading && (
-          <View style={styles.emptyState}>
-            <Calendar size={48} color="#ccc" />
-            <Text style={styles.emptyTitle}>Nenhum evento criado</Text>
-            <Text style={styles.emptySubtitle}>
+          <View style={[styles.emptyState, { backgroundColor: colors.card }]}>
+            <Calendar size={48} color={colors.textLight} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>Nenhum evento criado</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
               Crie o seu primeiro evento para começar a vender bilhetes
             </Text>
             <TouchableOpacity
-              style={styles.createButton}
+              style={[styles.createButton, { backgroundColor: colors.primary }]}
               onPress={() => router.push('/create-event')}
             >
               <Plus size={20} color="#fff" />
@@ -298,7 +306,7 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
       </ScrollView>
 
       <TouchableOpacity
-        style={styles.floatingButton}
+        style={[styles.floatingButton, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
         onPress={() => router.push('/create-event')}
       >
         <Plus size={28} color="#fff" />
@@ -310,7 +318,6 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   centered: {
     justifyContent: 'center',
@@ -318,12 +325,10 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
   },
   floatingButton: {
     position: 'absolute',
@@ -332,10 +337,8 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#0099a8',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#0099a8',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -349,11 +352,9 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 28,
     fontWeight: '700' as const,
-    color: '#1a1a1a',
   },
   welcomeSubtext: {
     fontSize: 14,
-    color: '#888',
     marginTop: 4,
   },
   statsGrid: {
@@ -364,11 +365,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 18,
     width: (width - 44) / 2,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -384,13 +383,11 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     fontSize: 12,
-    color: '#666',
     fontWeight: '500' as const,
   },
   statValue: {
     fontSize: 20,
     fontWeight: '700' as const,
-    color: '#333',
     marginBottom: 4,
   },
   section: {
@@ -400,11 +397,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700' as const,
-    color: '#1a1a1a',
     marginBottom: 12,
   },
   summaryCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
@@ -421,19 +416,15 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 15,
-    color: '#555',
   },
   summaryValue: {
     fontSize: 17,
     fontWeight: '700' as const,
-    color: '#333',
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: '#f0f0f0',
   },
   adsCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
@@ -451,7 +442,6 @@ const styles = StyleSheet.create({
     width: (width - 92) / 2,
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#f8f9fa',
     borderRadius: 8,
   },
   adsStatIconContainer: {
@@ -460,12 +450,10 @@ const styles = StyleSheet.create({
   adsStatValue: {
     fontSize: 20,
     fontWeight: '700' as const,
-    color: '#333',
     marginBottom: 4,
   },
   adsStatLabel: {
     fontSize: 12,
-    color: '#666',
     textAlign: 'center',
   },
   emptyState: {
@@ -473,26 +461,22 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     paddingHorizontal: 40,
     marginHorizontal: 16,
-    backgroundColor: '#fff',
     borderRadius: 16,
     marginTop: 20,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700' as const,
-    color: '#333',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#888',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,
   },
   nextEventCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -525,7 +509,6 @@ const styles = StyleSheet.create({
   nextEventTitle: {
     fontSize: 18,
     fontWeight: '700' as const,
-    color: '#1a1a1a',
     marginBottom: 8,
   },
   nextEventRow: {
@@ -536,12 +519,10 @@ const styles = StyleSheet.create({
   },
   nextEventText: {
     fontSize: 14,
-    color: '#666',
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0099a8',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 9999,
