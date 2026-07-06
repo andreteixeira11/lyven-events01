@@ -31,6 +31,8 @@ import {
   Ticket,
   Star,
   ChevronRight,
+  Trash2,
+  Ban,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '@/constants/colors';
@@ -77,6 +79,18 @@ export default function AdminEvents() {
     },
   });
   const rejectMutation = api.events.reject.useMutation({
+    onSuccess: () => {
+      void refetchEvents();
+      void queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
+  });
+  const cancelMutation = api.events.cancel.useMutation({
+    onSuccess: () => {
+      void refetchEvents();
+      void queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
+  });
+  const deleteMutation = api.events.delete.useMutation({
     onSuccess: () => {
       void refetchEvents();
       void queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -202,28 +216,40 @@ export default function AdminEvents() {
     ]);
   };
 
-  const handleEventAction = useCallback((eventId: string, action: 'approve' | 'reject' | 'cancel') => {
-    const labels: Record<string, string> = { approve: 'Aprovar', reject: 'Rejeitar', cancel: 'Cancelar' };
-    Alert.alert(labels[action], `Tem certeza?`, [
+  const handleEventAction = useCallback((eventId: string, action: 'approve' | 'reject' | 'cancel' | 'delete') => {
+    const labels: Record<string, string> = { approve: 'Aprovar', reject: 'Rejeitar', cancel: 'Cancelar', delete: 'Eliminar' };
+    const messages: Record<string, string> = {
+      approve: 'Tem certeza que quer aprovar este evento?',
+      reject: 'Tem certeza que quer rejeitar este evento?',
+      cancel: 'Tem certeza que quer cancelar este evento? Os utilizadores não poderão comprar mais bilhetes.',
+      delete: 'ATENÇÃO: Esta ação elimina permanentemente o evento e todos os bilhetes associados. Não pode ser desfeita. Tem certeza?',
+    };
+    Alert.alert(labels[action], messages[action], [
       { text: 'Não', style: 'cancel' },
       {
-        text: 'Sim',
+        text: action === 'delete' ? 'Eliminar' : 'Sim',
+        style: action === 'delete' ? 'destructive' : 'default',
         onPress: async () => {
           try {
             if (action === 'approve') {
               await approveMutation.mutateAsync({ eventId });
-            } else {
+            } else if (action === 'reject') {
               await rejectMutation.mutateAsync({ eventId });
+            } else if (action === 'cancel') {
+              await cancelMutation.mutateAsync({ eventId });
+            } else if (action === 'delete') {
+              await deleteMutation.mutateAsync({ id: eventId });
             }
             Alert.alert('Sucesso', 'Ação realizada com sucesso!');
           } catch (error) {
             console.error('Erro na ação:', error);
-            Alert.alert('Erro', 'Falha ao executar ação.');
+            const errMsg = error instanceof Error ? error.message : 'Falha ao executar ação.';
+            Alert.alert('Erro', errMsg);
           }
         }
       }
     ]);
-  }, [approveMutation, rejectMutation]);
+  }, [approveMutation, rejectMutation, cancelMutation, deleteMutation]);
 
   const handlePickEventImage = useCallback(async () => {
     try {
@@ -469,8 +495,27 @@ export default function AdminEvents() {
                       style={[styles.actionButton, { backgroundColor: COLORS.warning }]}
                       onPress={(e) => { e.stopPropagation(); handleEventAction(event.id, 'cancel'); }}
                     >
-                      <XCircle size={16} color={COLORS.white} />
+                      <Ban size={16} color={COLORS.white} />
                       <Text style={styles.actionButtonText}>Cancelar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionButton, { backgroundColor: COLORS.error }]}
+                      onPress={(e) => { e.stopPropagation(); handleEventAction(event.id, 'delete'); }}
+                    >
+                      <Trash2 size={16} color={COLORS.white} />
+                      <Text style={styles.actionButtonText}>Eliminar</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {event.status === 'cancelled' && (
+                  <View style={styles.eventActions}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, { backgroundColor: COLORS.error }]}
+                      onPress={(e) => { e.stopPropagation(); handleEventAction(event.id, 'delete'); }}
+                    >
+                      <Trash2 size={16} color={COLORS.white} />
+                      <Text style={styles.actionButtonText}>Eliminar</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -884,8 +929,27 @@ export default function AdminEvents() {
                       style={[styles.detailActionBtn, { backgroundColor: COLORS.warning }]}
                       onPress={() => { setShowDetailModal(false); handleEventAction(selectedEvent.id, 'cancel'); }}
                     >
-                      <XCircle size={18} color={COLORS.white} />
+                      <Ban size={18} color={COLORS.white} />
                       <Text style={styles.detailActionBtnText}>Cancelar Evento</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.detailActionBtn, { backgroundColor: COLORS.error }]}
+                      onPress={() => { setShowDetailModal(false); handleEventAction(selectedEvent.id, 'delete'); }}
+                    >
+                      <Trash2 size={18} color={COLORS.white} />
+                      <Text style={styles.detailActionBtnText}>Eliminar</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {selectedEvent.status === 'cancelled' && (
+                  <View style={styles.detailActions}>
+                    <TouchableOpacity
+                      style={[styles.detailActionBtn, { backgroundColor: COLORS.error }]}
+                      onPress={() => { setShowDetailModal(false); handleEventAction(selectedEvent.id, 'delete'); }}
+                    >
+                      <Trash2 size={18} color={COLORS.white} />
+                      <Text style={styles.detailActionBtnText}>Eliminar Evento</Text>
                     </TouchableOpacity>
                   </View>
                 )}

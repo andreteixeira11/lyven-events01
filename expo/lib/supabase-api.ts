@@ -290,6 +290,48 @@ export const eventsApi = {
     }
   },
 
+  cancel: async (input: { eventId: string; reason?: string }): Promise<any> => {
+    try {
+      const { data: event } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', input.eventId)
+        .single();
+
+      if (!event) throw new Error('Evento não encontrado');
+      if (event.status === 'cancelled') throw new Error('Evento já está cancelado');
+
+      const { data, error } = await supabase
+        .from('events')
+        .update({ status: 'cancelled' })
+        .eq('id', input.eventId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (event.promoter_id) {
+        const message = input.reason
+          ? `O seu evento "${event.title}" foi cancelado. Motivo: ${input.reason}`
+          : `O seu evento "${event.title}" foi cancelado.`;
+        await supabase.from('notifications').insert({
+          id: genId('notif'),
+          user_id: event.promoter_id,
+          type: 'system',
+          title: 'Evento Cancelado',
+          message,
+          data: JSON.stringify({ eventId: input.eventId, reason: input.reason }),
+          is_read: false,
+        });
+      }
+
+      return data;
+    } catch (err) {
+      console.error('[eventsApi.cancel] error:', err);
+      throw err;
+    }
+  },
+
   approve: async (input: { eventId: string }): Promise<any> => {
     try {
       const { data: event } = await supabase
