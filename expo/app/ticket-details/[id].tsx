@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,10 @@ import {
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/theme-context';
+import { useUser } from '@/hooks/user-context';
+import { api } from '@/lib/api';
+import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
+import { handleError } from '@/lib/error-handler';
 import QRCode from '@/components/QRCode';
 
 const { width } = Dimensions.get('window');
@@ -47,28 +51,10 @@ interface Ticket {
   qrCode: string;
 }
 
-const mockTickets: Ticket[] = [
-  {
-    id: '1',
-    buyerName: 'Fábio Caires',
-    ticketNumber: 1,
-    totalTickets: 2,
-    ticketType: 'General Admission',
-    qrCode: 'TICKET-001-ABC123'
-  },
-  {
-    id: '2',
-    buyerName: 'Fábio Caires',
-    ticketNumber: 2,
-    totalTickets: 2,
-    ticketType: 'General Admission',
-    qrCode: 'TICKET-002-ABC124'
-  }
-];
-
 export default function TicketDetailsScreen() {
   const { id } = useLocalSearchParams();
   const { colors, isDark } = useTheme();
+  const { user } = useUser();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -76,34 +62,59 @@ export default function TicketDetailsScreen() {
   const [transferEmail, setTransferEmail] = useState('');
   const [refundModalVisible, setRefundModalVisible] = useState(false);
 
-  const demoEvent = {
-    id: 't1',
-    title: 'The Purple Fridays',
-    image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
-    date: new Date('2025-10-31T19:00:00'),
-    endDate: new Date('2025-10-31T23:00:00'),
-    venue: {
-      id: 'v1',
-      name: 'Estalagem Da Ponta Do Sol',
-      address: 'Rua da Ponta do Sol',
-      city: 'Ponta do Sol',
-      capacity: 500
-    },
-    promoter: {
-      id: 'p1',
-      name: 'Live Nation Portugal',
-      image: 'https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=400',
-      description: 'Promotora líder mundial em entretenimento ao vivo',
-      verified: true,
-      followersCount: 125000
-    },
-    coordinates: {
-      latitude: 32.6871,
-      longitude: -17.1024
-    }
-  };
-  
-  const event = demoEvent;
+  // Fetch the real ticket from Supabase
+  const { data: ticketData, isLoading, error } = api.tickets.get.useQuery(
+    { id: String(id ?? '') },
+    { enabled: !!id }
+  );
+
+  // Fetch all user tickets to build the carousel (same event tickets)
+  const { data: userTickets } = api.tickets.list.useQuery(
+    { userId: user?.id ?? '' },
+    { enabled: !!user?.id }
+  );
+
+  // Fetch the event for this ticket
+  const { data: eventData } = api.events.get.useQuery(
+    { id: ticketData?.eventId ?? '' },
+    { enabled: !!ticketData?.eventId }
+  );
+
+  const event = eventData ? {
+    id: eventData.id,
+    title: eventData.title,
+    image: eventData.image,
+    date: new Date(eventData.date),
+    endDate: eventData.endDate ? new Date(eventData.endDate) : undefined,
+    venue: typeof eventData.venue === 'object' && eventData.venue
+      ? { id: eventData.venue.id ?? '', name: eventData.venue.name ?? '', address: eventData.venue.address ?? '', city: eventData.venue.city ?? '', capacity: eventData.venue.capacity ?? 0 }
+      : { id: '', name: '', address: '', city: '', capacity: 0 },
+    promoter: typeof eventData.promoter === 'object' && eventData.promoter
+      ? { id: eventData.promoter.id ?? '', name: eventData.promoter.name ?? '', image: eventData.promoter.image ?? '', description: eventData.promoter.description ?? '', verified: eventData.promoter.verified ?? false, followersCount: eventData.promoter.followersCount ?? 0 }
+      : { id: '', name: '', image: '', description: '', verified: false, followersCount: 0 },
+    coordinates: (eventData as any).coordinates ?? undefined,
+    ticketTypes: Array.isArray((eventData as any).ticketTypes) ? (eventData as any).ticketTypes : [],
+  } : null;
+
+  // Build tickets list: all tickets for the same event (for carousel)
+  const tickets: Ticket[] = useMemo(() => {
+    if (!ticketData) return [];
+    const sameEventTickets = (userTickets && Array.isArray(userTickets))
+      ? userTickets.filter((t: any) => t.eventId === ticketData.eventId)
+      : [ticketData];
+    const total = sameEventTickets.length;
+    return sameEventTickets.map((t: any, idx: number) => {
+      const ticketType = event?.ticketTypes?.find((tt: any) => tt.id === t.ticketTypeId);
+      return {
+        id: t.id,
+        buyerName: user?.name ?? 'Comprador',
+        ticketNumber: idx + 1,
+        totalTickets: total,
+        ticketType: ticketType?.name ?? 'Bilhete',
+        qrCode: t.qrCode,
+      };
+    });
+  }, [ticketData, userTickets, event, user?.name]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('pt-PT', {
@@ -128,6 +139,7 @@ export default function TicketDetailsScreen() {
   };
 
   const handleShare = async () => {
+    if (!event) return;
     try {
       const message = `🎫 ${event.title}\n📅 ${formatDate(event.date)} às ${formatTime(event.date)}\n📍 ${event.venue.name}\n\nCompra os teus bilhetes na Lyven!`;
       
@@ -161,6 +173,7 @@ export default function TicketDetailsScreen() {
   };
 
   const handleAddToCalendar = async () => {
+    if (!event) return;
     if (Platform.OS === 'web') {
       const start = event.date.toISOString().replace(/-|:|\.\d+/g, '');
       const end = event.endDate ? event.endDate.toISOString().replace(/-|:|\.\d+/g, '') : '';
@@ -172,13 +185,14 @@ export default function TicketDetailsScreen() {
   };
 
   const handleViewMap = () => {
-    if (event.coordinates) {
+    if (event?.coordinates) {
       const url = `https://maps.google.com/?q=${event.coordinates.latitude},${event.coordinates.longitude}`;
       Linking.openURL(url);
     }
   };
 
   const handleEventDetails = () => {
+    if (!event) return;
     router.push(`/event/${event.id}`);
   };
 
@@ -187,8 +201,8 @@ export default function TicketDetailsScreen() {
       'Detalhes do Pedido',
       `ID do Pedido: ${id}\n` +
       `Data de Compra: ${new Date().toLocaleDateString('pt-PT')}\n` +
-      `Total de Bilhetes: ${mockTickets.length}\n` +
-      `Valor Total: €${(mockTickets.length * 25).toFixed(2)}\n` +
+      `Total de Bilhetes: ${tickets.length}\n` +
+      `Valor Total: €${tickets.reduce((sum, t) => sum + 25, 0).toFixed(2)}\n` +
       `Método de Pagamento: Multibanco\n` +
       `Estado: Confirmado`,
       [{ text: 'OK' }]
@@ -216,8 +230,8 @@ export default function TicketDetailsScreen() {
   const handleTicketInfo = () => {
     Alert.alert(
       'Informações do Ingresso',
-      `📋 Tipo: ${mockTickets[0].ticketType}\n` +
-      `🎫 Quantidade: ${mockTickets.length}\n` +
+      `📋 Tipo: ${tickets[0]?.ticketType ?? 'Bilhete'}\n` +
+      `🎫 Quantidade: ${tickets.length}\n` +
       `✅ Estado: Válido\n` +
       `🔒 Código QR: Único e intransferível\n\n` +
       `⚠️ Importante:\n` +
@@ -264,7 +278,7 @@ export default function TicketDetailsScreen() {
     
     Alert.alert(
       'Confirmar Transferência',
-      `Deseja transferir ${mockTickets.length} bilhete(s) para ${transferEmail}?`,
+      `Deseja transferir ${tickets.length} bilhete(s) para ${transferEmail}?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -295,6 +309,28 @@ export default function TicketDetailsScreen() {
       ]
     );
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <LoadingSpinner message="A carregar bilhete..." />
+      </View>
+    );
+  }
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ErrorState message={handleError(error)} onRetry={() => router.back()} />
+      </View>
+    );
+  }
+  if (!event) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ErrorState message="Evento não encontrado" onRetry={() => router.back()} />
+      </View>
+    );
+  }
 
   return (
     <>
@@ -338,7 +374,7 @@ export default function TicketDetailsScreen() {
             scrollEventThrottle={16}
             style={styles.ticketCarousel}
           >
-            {mockTickets.map((ticket) => (
+            {tickets.length > 0 ? tickets.map((ticket) => (
               <View key={ticket.id} style={[styles.ticketCard, { width }]}>
                 <View style={styles.qrContainer}>
                   <QRCode 
@@ -356,11 +392,15 @@ export default function TicketDetailsScreen() {
                   {ticket.ticketType}
                 </Text>
               </View>
-            ))}
+            )) : (
+              <View style={[styles.ticketCard, { width }]}>
+                <Text style={[styles.ticketType, { color: colors.textSecondary }]}>Sem bilhetes</Text>
+              </View>
+            )}
           </ScrollView>
 
           <View style={styles.dotsContainer}>
-            {mockTickets.map((_, index) => (
+            {tickets.map((_, index) => (
               <View
                 key={index}
                 style={[

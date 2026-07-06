@@ -76,10 +76,17 @@ export default function QRScannerScreen() {
     try {
       const result = await apiClient.tickets.validate.mutate({ 
         qrCode: data,
+        validatorId: user?.id,
       });
       
       console.log('✅ Resultado da validação:', result);
       
+      if (!result.valid) {
+        handleInvalidTicket(result.message || 'Bilhete inválido');
+        setIsValidating(false);
+        return;
+      }
+
       // Verificar se o bilhete é para este evento
       if (result.ticket.eventId !== id) {
         handleInvalidTicket('Bilhete não é para este evento');
@@ -104,17 +111,8 @@ export default function QRScannerScreen() {
     } catch (error: any) {
       console.error('❌ Erro ao validar bilhete:', error);
       
-      let errorMessage = 'Erro ao validar bilhete';
-      
-      if (error.message?.includes('not found')) {
-        errorMessage = 'QR Code não reconhecido';
-      } else if (error.message?.includes('already used')) {
-        errorMessage = 'Bilhete já foi utilizado';
-      } else if (error.message?.includes('expired')) {
-        errorMessage = 'Bilhete expirado';
-      }
-      
-      handleInvalidTicket(errorMessage);
+      const message = error.message || 'Erro ao validar bilhete';
+      handleInvalidTicket(message);
     } finally {
       setIsValidating(false);
     }
