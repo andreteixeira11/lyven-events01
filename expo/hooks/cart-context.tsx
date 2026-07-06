@@ -2,7 +2,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { CartItem, PurchasedTicket } from '@/types/event';
-import { ticketsApi } from '@/lib/supabase-api';
+import { ticketsApi, seatsApi } from '@/lib/supabase-api';
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -122,6 +122,7 @@ export const [CartProvider, useCart] = createContextHook<CartContextType>(() => 
           qrCode,
           eventId: item.eventId,
           quantity: item.quantity,
+          seatLabels: item.seatLabels,
         });
 
         return {
@@ -133,11 +134,29 @@ export const [CartProvider, useCart] = createContextHook<CartContextType>(() => 
           price: item.price,
           qrCode,
           validUntil: validUntil.toISOString(),
+          seatLabels: item.seatLabels,
         };
       });
 
       await ticketsApi.batchCreate({ tickets: ticketsToCreate });
       console.log('✅ Bilhetes criados no Supabase com sucesso');
+
+      // Book seats for items that have seat labels
+      const seatsByEvent = new Map<string, string[]>();
+      for (const item of cartItems) {
+        if (item.seatLabels && item.seatLabels.length > 0) {
+          const existing = seatsByEvent.get(item.eventId) || [];
+          seatsByEvent.set(item.eventId, [...existing, ...item.seatLabels]);
+        }
+      }
+      for (const [eventId, seatLabels] of seatsByEvent) {
+        try {
+          await seatsApi.bookSeats({ eventId, seatLabels, userId });
+          console.log('✅ Lugares reservados para evento', eventId, ':', seatLabels.length);
+        } catch (seatErr) {
+          console.warn('⚠️ Erro ao marcar lugares como ocupados (nao critico):', seatErr);
+        }
+      }
 
       const newTickets: PurchasedTicket[] = ticketsToCreate.map((ticket) => ({
         id: ticket.id,

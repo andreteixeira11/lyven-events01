@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, ScrollView, Image, TouchableOpacity, SafeAreaView, Platform, Alert, ActionSheetIOS } from "react-native";
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import { Calendar, MapPin, ChevronLeft, Share2, Heart, Bell, Clock, Instagram, Facebook, Globe, UserPlus } from "lucide-react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { api } from "@/lib/api";
 import { handleError } from "@/lib/error-handler";
 import { LoadingSpinner, ErrorState } from "@/components/LoadingStates";
@@ -12,9 +12,13 @@ import { useCalendar } from "@/hooks/calendar-context";
 import { shareEvent as shareEventUtil, shareEventWithImage } from '@/lib/share-utils';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/theme-context';
+import { useUser } from '@/hooks/user-context';
 import { hp, responsiveFontSize, responsiveSpacing, moderateScale } from '@/utils/responsive-styles';
 import { SocialProof } from '@/components/SocialProof';
 import { FOMOAlert } from '@/components/FOMOAlert';
+import { SeatMap, BALTAZAR_DIAS_SEAT_MAP } from '@/components/SeatMap';
+import { isBaltazarDiasVenue } from '@/constants/venue-seat-maps';
+import { useQueryClient } from '@tanstack/react-query';
 
 
 export default function EventDetailScreen() {
@@ -23,9 +27,13 @@ export default function EventDetailScreen() {
   const { isFavorite, addToFavorites, removeFromFavorites } = useFavorites();
   const { addToCalendar, setReminder, hasReminder, isEventInCalendar } = useCalendar();
   const { colors } = useTheme();
+  const { user } = useUser();
+  const queryClient = useQueryClient();
   
   const [selectedTickets, setSelectedTickets] = useState<{ [key: string]: number }>({});
   const [isLiked, setIsLiked] = useState(false);
+  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+  const [seatMapVisible, setSeatMapVisible] = useState(false);
 
   const { 
     data: eventData, 
@@ -61,6 +69,42 @@ export default function EventDetailScreen() {
   } : null;
   
   const eventId = event?.id;
+
+  // Detect if this event is at a venue with a numbered seat map (e.g. Teatro Baltazar Dias)
+  const hasSeatMap = useMemo(
+    () => !!event && isBaltazarDiasVenue(event.venue.name),
+    [event]
+  );
+
+  // Load seat states from Supabase for seat-map venues
+  const { data: eventSeatsData } = api.seats.listEventSeats.useQuery(
+    { eventId: eventId || '' },
+    { enabled: !!eventId && hasSeatMap, staleTime: 15000 }
+  );
+
+  const ensureSeatsMutation = api.seats.ensureEventSeats.useMutation();
+  const reserveSeatsMutation = api.seats.reserveSeats.useMutation();
+
+  const seatStates = useMemo<Record<string, 'available' | 'selected' | 'booked' | 'reserved' | 'blocked'>>(() => {
+    const map: Record<string, any> = {};
+    if (eventSeatsData && Array.isArray(eventSeatsData)) {
+      for (const row of eventSeatsData) {
+        if (row.seat_label && row.status) {
+          map[row.seat_label] = row.status;
+        }
+      }
+    }
+    return map;
+  }, [eventSeatsData]);
+
+  useEffect(() => {
+    if (eventId && hasSeatMap && event) {
+      ensureSeatsMutation.mutateAsync({ eventId, venueName: event.venue.name }).catch(() => {});
+      void queryClient.invalidateQueries({ queryKey: ['seats', 'listEventSeats'] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, hasSeatMap]);
+
   useEffect(() => {
     if (eventId) {
       setIsLiked(isFavorite(eventId));
@@ -134,6 +178,44 @@ export default function EventDetailScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     
+    // For seat-map venues: add a single cart item per selected seat group
+    if (hasSeatMap) {
+      if (selectedSeats.length === 0) {
+        Alert.alert('Seleção de lugares', 'Por favor, selecione pelo menos um lugar no mapa da plateia.');
+        return;
+      }
+      // Use the first (or only) ticket type as the price reference.
+      // For Baltazar Dias we treat all selected seats as Plateia tier unless
+      // ticket types explicitly model sections.
+      const ticket = event.ticketTypes[0];
+      if (ticket) {
+        addToCart({
+          eventId: event.id,
+          ticketTypeId: ticket.id,
+          quantity: selectedSeats.length,
+          price: ticket.price,
+          eventTitle: event.title,
+          eventImage: event.image,
+          ticketTypeName: ticket.name,
+          seatLabels: selectedSeats,
+          venueName: event.venue.name,
+        });
+      }
+      // Release previous reservation and reserve the new selection
+      if (user) {
+        reserveSeatsMutation.mutateAsync({
+          eventId: event.id,
+          seatLabels: selectedSeats,
+          userId: user.id,
+          minutes: 10,
+        }).catch(() => {});
+      }
+      setSelectedSeats([]);
+      setSeatMapVisible(false);
+      router.push('/(tabs)/tickets?tab=cart');
+      return;
+    }
+
     Object.entries(selectedTickets).forEach(([ticketId, quantity]) => {
       const ticket = event.ticketTypes.find(t => t.id === ticketId);
       if (ticket) {
@@ -145,6 +227,7 @@ export default function EventDetailScreen() {
           eventTitle: event.title,
           eventImage: event.image,
           ticketTypeName: ticket.name,
+          venueName: event.venue.name,
         });
       }
     });
@@ -543,7 +626,60 @@ export default function EventDetailScreen() {
           {!event.isSoldOut && (
             <View style={styles.ticketsSection}>
               <Text style={[styles.sectionTitle, { color: colors.primary }]}>Ingressos</Text>
-              {event.ticketTypes.map(ticket => (
+
+              {/* Seat selection for venues with numbered seats */}
+              {hasSeatMap && (
+                <View style={[styles.seatMapCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <View style={styles.seatMapHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.seatMapTitle, { color: colors.text }]}>
+                        Seleção de Lugares
+                      </Text>
+                      <Text style={[styles.seatMapSubtitle, { color: colors.textSecondary }]}>
+                        {event.venue.name} — Plateia numerada
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.seatMapToggle, { backgroundColor: colors.primary }]}
+                      onPress={() => setSeatMapVisible((v) => !v)}
+                    >
+                      <Text style={styles.seatMapToggleText}>
+                        {seatMapVisible ? 'Fechar mapa' : 'Abrir mapa'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {seatMapVisible && (
+                    <SeatMap
+                      map={BALTAZAR_DIAS_SEAT_MAP}
+                      seatStates={seatStates}
+                      selectedSeats={selectedSeats}
+                      onToggleSeat={(label) => {
+                        setSelectedSeats((prev) =>
+                          prev.includes(label)
+                            ? prev.filter((l) => l !== label)
+                            : [...prev, label]
+                        );
+                      }}
+                      maxSelectable={Math.min(
+                        6,
+                        event.ticketTypes[0]?.maxPerPerson ?? 6
+                      )}
+                      onMaxExceeded={() =>
+                        Alert.alert(
+                          'Limite de lugares',
+                          'Só pode selecionar até ' +
+                            (Math.min(6, event.ticketTypes[0]?.maxPerPerson ?? 6)) +
+                            ' lugares por compra.'
+                        )
+                      }
+                    />
+                  )}
+                </View>
+              )}
+
+              {/* Standard ticket types (shown for non-seat-map venues, or as info for seat-map venues) */}
+              {!hasSeatMap && event.ticketTypes.map(ticket => (
                 <View key={ticket.id} style={[styles.ticketCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={styles.ticketInfo}>
                     <Text style={[styles.ticketName, { color: colors.primary }]}>{ticket.name}</Text>
@@ -587,17 +723,38 @@ export default function EventDetailScreen() {
                   </View>
                 </View>
               ))}
+
+              {/* Price reference for seat-map venues */}
+              {hasSeatMap && event.ticketTypes[0] && (
+                <View style={[styles.seatPriceInfo, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Text style={[styles.seatPriceLabel, { color: colors.textSecondary }]}>
+                    Preço por lugar
+                  </Text>
+                  <Text style={[styles.seatPriceValue, { color: colors.primary }]}>
+                    €{event.ticketTypes[0].price.toFixed(2)}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
         </View>
       </ScrollView>
 
       {/* Footer */}
-      {getTotalTickets() > 0 && (
+      {(hasSeatMap ? selectedSeats.length > 0 : getTotalTickets() > 0) && (
         <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
           <View style={styles.footerInfo}>
-            <Text style={[styles.footerTickets, { color: colors.textSecondary }]}>{getTotalTickets()} ingresso(s)</Text>
-            <Text style={[styles.footerPrice, { color: colors.primary }]}>€{getTotalPrice().toFixed(2)}</Text>
+            <Text style={[styles.footerTickets, { color: colors.textSecondary }]}>
+              {hasSeatMap
+                ? `${selectedSeats.length} lugar(es)`
+                : `${getTotalTickets()} ingresso(s)`}
+            </Text>
+            <Text style={[styles.footerPrice, { color: colors.primary }]}>
+              €{(hasSeatMap
+                ? selectedSeats.length * (event.ticketTypes[0]?.price ?? 0)
+                : getTotalPrice()
+              ).toFixed(2)}
+            </Text>
           </View>
           <TouchableOpacity 
             style={[styles.addToCartButton, { backgroundColor: colors.primary }]}
@@ -916,6 +1073,54 @@ const styles = StyleSheet.create({
   },
   ticketsSection: {
     marginBottom: 100,
+  },
+  seatMapCard: {
+    borderRadius: moderateScale(12),
+    padding: responsiveSpacing(16),
+    marginBottom: responsiveSpacing(12),
+    borderWidth: 1,
+  },
+  seatMapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+  },
+  seatMapTitle: {
+    fontSize: responsiveFontSize(16),
+    fontWeight: 'bold' as const,
+  },
+  seatMapSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  seatMapToggle: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 9999,
+  },
+  seatMapToggleText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700' as const,
+  },
+  seatPriceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: responsiveSpacing(16),
+    paddingVertical: responsiveSpacing(12),
+    borderRadius: moderateScale(12),
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  seatPriceLabel: {
+    fontSize: 14,
+  },
+  seatPriceValue: {
+    fontSize: 20,
+    fontWeight: 'bold' as const,
   },
   ticketCard: {
     backgroundColor: '#F0F9FA',

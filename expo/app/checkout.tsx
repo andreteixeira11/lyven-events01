@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { LoadingSpinner, ErrorState } from "@/components/LoadingStates";
 import { handleError } from "@/lib/error-handler";
-import { CreditCard, CheckCircle, X, Phone, Building2, ShoppingCart, ChevronRight, Shield, Lock, Ticket, Calendar, MapPin, Minus, Plus, Trash2, ArrowLeft, Check } from "lucide-react-native";
+import { CreditCard, CheckCircle, X, Phone, Building2, ShoppingCart, ChevronRight, Shield, Lock, Ticket, Calendar, MapPin, Minus, Plus, Trash2, ArrowLeft, Check, Armchair } from "lucide-react-native";
 import * as Haptics from 'expo-haptics';
 import { useUser } from "@/hooks/user-context";
 import { useTheme } from "@/hooks/theme-context";
@@ -386,6 +386,15 @@ export default function CheckoutScreen() {
                       {ticketType.name}
                     </Text>
                   </View>
+
+                  {item.seatLabels && item.seatLabels.length > 0 && (
+                    <View style={[styles.ticketTypeTag, { backgroundColor: colors.primaryLight, marginTop: 6 }]}>
+                      <Armchair size={12} color={colors.primary} />
+                      <Text style={[styles.ticketTypeText, { color: colors.primary }]} numberOfLines={2}>
+                        Lugares: {item.seatLabels.join(', ')}
+                      </Text>
+                    </View>
+                  )}
 
                   <View style={styles.ticketFooter}>
                     <View style={styles.quantityControl}>

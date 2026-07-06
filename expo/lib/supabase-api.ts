@@ -2294,3 +2294,247 @@ export const webhooksApi = {
     return eventsApi.create(input);
   },
 };
+
+/**
+ * Seat reservation API for venues with numbered seats (e.g. Teatro Baltazar Dias).
+ * Persists per-event seat state in the `event_seats` table.
+ */
+export const seatsApi = {
+  /**
+   * Returns the static seat-map layout for a given venue name.
+   * For venues we have a hardcoded layout (Baltazar Dias), returns the map; otherwise null.
+   */
+  getVenueLayout: async (input: { venueName: string }): Promise<{
+    seatMapId: string;
+    venueName: string;
+    sections: any[];
+    totalSeats: number;
+  } | null> => {
+    try {
+      const { isBaltazarDiasVenue, BALTAZAR_DIAS_SEAT_MAP, flattenSeats } =
+        await import('@/constants/venue-seat-maps');
+      if (isBaltazarDiasVenue(input.venueName)) {
+        return {
+          seatMapId: BALTAZAR_DIAS_SEAT_MAP.id,
+          venueName: BALTAZAR_DIAS_SEAT_MAP.venueName,
+          sections: BALTAZAR_DIAS_SEAT_MAP.sections,
+          totalSeats: flattenSeats(BALTAZAR_DIAS_SEAT_MAP).length,
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error('[seatsApi.getVenueLayout] error:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Ensures the event_seats rows exist for an event at a venue with a seat map.
+   * Idempotent: if rows already exist, just returns the current state.
+   */
+  ensureEventSeats: async (input: {
+    eventId: string;
+    venueName: string;
+  }): Promise<{ initialized: boolean; seats: any[] }> => {
+    try {
+      // Check if rows already exist for this event
+      const { data: existing, error: existingErr } = await supabase
+        .from('event_seats')
+        .select('*')
+        .eq('event_id', input.eventId)
+        .limit(1);
+
+      if (existingErr) {
+        console.error('[seatsApi.ensureEventSeats] check error:', existingErr.message);
+        return { initialized: false, seats: [] };
+      }
+
+      if (existing && existing.length > 0) {
+        // Already initialized — fetch all
+        const { data: all, error: allErr } = await supabase
+          .from('event_seats')
+          .select('*')
+          .eq('event_id', input.eventId)
+          .order('sort_index', { ascending: true });
+        if (allErr) {
+          console.error('[seatsApi.ensureEventSeats] fetch all error:', allErr.message);
+          return { initialized: false, seats: [] };
+        }
+        return { initialized: false, seats: all || [] };
+      }
+
+      // Need to initialize. Get the layout.
+      const layout = await seatsApi.getVenueLayout({ venueName: input.venueName });
+      if (!layout) {
+        return { initialized: false, seats: [] };
+      }
+
+      const { flattenSeats, BALTAZAR_DIAS_SEAT_MAP } =
+        await import('@/constants/venue-seat-maps');
+      const map = BALTAZAR_DIAS_SEAT_MAP;
+      const allSeats = flattenSeats(map);
+
+      // Insert in batches to avoid payload limits
+      const batchSize = 200;
+      const rows = allSeats.map((s) => ({
+        id: `${input.eventId}_${s.id}`,
+        event_id: input.eventId,
+        seat_map_id: layout.seatMapId,
+        seat_label: s.id,
+        section: s.section,
+        row_label: s.rowLabel,
+        seat_number: s.seatNumber,
+        sort_index: s.sortIndex,
+        status: 'available',
+      }));
+
+      for (let i = 0; i < rows.length; i += batchSize) {
+        const batch = rows.slice(i, i + batchSize);
+        const { error: insertErr } = await supabase.from('event_seats').insert(batch);
+        if (insertErr) {
+          console.error('[seatsApi.ensureEventSeats] insert batch error:', insertErr.message);
+          // If some rows were already inserted (race), continue gracefully
+          if (insertErr.code !== '23505') {
+            return { initialized: false, seats: [] };
+          }
+        }
+      }
+
+      const { data: all } = await supabase
+        .from('event_seats')
+        .select('*')
+        .eq('event_id', input.eventId)
+        .order('sort_index', { ascending: true });
+      return { initialized: true, seats: all || [] };
+    } catch (err) {
+      console.error('[seatsApi.ensureEventSeats] error:', err);
+      return { initialized: false, seats: [] };
+    }
+  },
+
+  /**
+   * Lists all seats for an event with their current status.
+   */
+  listEventSeats: async (input: { eventId: string }): Promise<any[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('event_seats')
+        .select('*')
+        .eq('event_id', input.eventId)
+        .order('sort_index', { ascending: true });
+      if (error) {
+        console.error('[seatsApi.listEventSeats] error:', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (err) {
+      console.error('[seatsApi.listEventSeats] error:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Reserves a list of seats for a user (status -> 'reserved' with a TTL).
+   * Only succeeds if all seats are currently 'available'.
+   */
+  reserveSeats: async (input: {
+    eventId: string;
+    seatLabels: string[];
+    userId: string;
+    minutes?: number;
+  }): Promise<{ success: boolean; reserved: string[]; conflict?: string[] }> => {
+    try {
+      if (input.seatLabels.length === 0) return { success: true, reserved: [] };
+
+      const ttlMinutes = input.minutes ?? 10;
+      const reservedUntil = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
+
+      // Atomic conditional update: only update seats that are still available
+      const { data: updated, error } = await supabase
+        .from('event_seats')
+        .update({
+          status: 'reserved',
+          reserved_by: input.userId,
+          reserved_until: reservedUntil,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('event_id', input.eventId)
+        .in('seat_label', input.seatLabels)
+        .eq('status', 'available')
+        .select('seat_label');
+
+      if (error) {
+        console.error('[seatsApi.reserveSeats] error:', error.message);
+        return { success: false, reserved: [], conflict: input.seatLabels };
+      }
+
+      const reserved = (updated || []).map((r: any) => r.seat_label);
+      const conflicts = input.seatLabels.filter((l) => !reserved.includes(l));
+
+      return {
+        success: conflicts.length === 0,
+        reserved,
+        conflict: conflicts,
+      };
+    } catch (err) {
+      console.error('[seatsApi.reserveSeats] error:', err);
+      return { success: false, reserved: [], conflict: input.seatLabels };
+    }
+  },
+
+  /**
+   * Releases a list of reserved seats back to 'available'.
+   */
+  releaseSeats: async (input: {
+    eventId: string;
+    seatLabels: string[];
+  }): Promise<{ success: boolean }> => {
+    try {
+      if (input.seatLabels.length === 0) return { success: true };
+      const { error } = await supabase
+        .from('event_seats')
+        .update({
+          status: 'available',
+          reserved_by: null,
+          reserved_until: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('event_id', input.eventId)
+        .in('seat_label', input.seatLabels)
+        .eq('status', 'reserved');
+      if (error) console.error('[seatsApi.releaseSeats] error:', error.message);
+      return { success: !error };
+    } catch (err) {
+      console.error('[seatsApi.releaseSeats] error:', err);
+      return { success: false };
+    }
+  },
+
+  /**
+   * Marks seats as definitively booked after a successful purchase.
+   */
+  bookSeats: async (input: {
+    eventId: string;
+    seatLabels: string[];
+    userId: string;
+  }): Promise<{ success: boolean }> => {
+    try {
+      if (input.seatLabels.length === 0) return { success: true };
+      const { error } = await supabase
+        .from('event_seats')
+        .update({
+          status: 'booked',
+          booked_by: input.userId,
+          booked_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('event_id', input.eventId)
+        .in('seat_label', input.seatLabels);
+      if (error) console.error('[seatsApi.bookSeats] error:', error.message);
+      return { success: !error };
+    } catch (err) {
+      console.error('[seatsApi.bookSeats] error:', err);
+      return { success: false };
+    }
+  },
+};

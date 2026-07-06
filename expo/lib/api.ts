@@ -19,6 +19,7 @@ import {
   identityApi,
   recommendationsApi,
   webhooksApi,
+  seatsApi,
 } from './supabase-api';
 import React from 'react';
 
@@ -186,6 +187,14 @@ export const api = {
   },
   webhooks: {
     createEvent: createMutationHook(webhooksApi.createEvent),
+  },
+  seats: {
+    getVenueLayout: createQueryHook(['seats', 'getVenueLayout'], seatsApi.getVenueLayout),
+    ensureEventSeats: createMutationHook(seatsApi.ensureEventSeats),
+    listEventSeats: createQueryHook(['seats', 'listEventSeats'], seatsApi.listEventSeats),
+    reserveSeats: createMutationHook(seatsApi.reserveSeats),
+    releaseSeats: createMutationHook(seatsApi.releaseSeats),
+    bookSeats: createMutationHook(seatsApi.bookSeats),
   },
   example: {
     hi: createMutationHook(exampleApi.hi),
@@ -367,5 +376,13 @@ export const apiClient = {
   },
   example: {
     hi: { mutate: exampleApi.hi },
+  },
+  seats: {
+    getVenueLayout: { query: seatsApi.getVenueLayout },
+    ensureEventSeats: { mutate: seatsApi.ensureEventSeats },
+    listEventSeats: { query: seatsApi.listEventSeats },
+    reserveSeats: { mutate: seatsApi.reserveSeats },
+    releaseSeats: { mutate: seatsApi.releaseSeats },
+    bookSeats: { mutate: seatsApi.bookSeats },
   },
 };

@@ -55,6 +55,10 @@ export interface CartItem {
   eventTitle?: string;
   eventImage?: string;
   ticketTypeName?: string;
+  /** Seat labels selected for this cart item (for venues with numbered seats). */
+  seatLabels?: string[];
+  /** Venue name (used to detect seat-map venues). */
+  venueName?: string;
 }
 
 export interface PurchasedTicket {
