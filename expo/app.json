@@ -5,9 +5,10 @@
     "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "lyven",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
+    "jsEngine": "hermes",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -121,7 +122,7 @@
         "origin": "https://rork.com/"
       },
       "eas": {
-        "projectId": ""
+        "projectId": "07mpjpnu098wcqwfiffs1"
       }
     }
   }
