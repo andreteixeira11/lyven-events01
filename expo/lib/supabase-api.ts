@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { sendEmail } from './email';
 import { Event, Promoter, EventCategory } from '@/types/event';
 
 function safeJsonParse<T>(val: unknown, fallback: T): T {
@@ -177,8 +178,7 @@ export const eventsApi = {
       if (error) throw error;
 
       try {
-        const backendUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-        if (backendUrl && input.promoterId) {
+        if (input.promoterId) {
           const { data: promoterProfile } = await supabase
             .from('promoter_profiles')
             .select('user_id, company_name')
@@ -202,21 +202,14 @@ export const eventsApi = {
 
           if (promoterEmail) {
             console.log('[eventsApi.create] Sending admin notification email for new event...');
-            fetch(`${backendUrl}/api/trpc/email.sendNewEventNotification`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                json: {
-                  eventTitle: input.title || 'Sem título',
-                  promoterName,
-                  promoterEmail,
-                  eventDate: input.date || '',
-                  venueName: input.venueName || input.venue?.name || '',
-                  category: input.category || 'other',
-                },
-              }),
-            }).catch((emailErr: any) => {
-              console.warn('[eventsApi.create] Failed to send admin email:', emailErr?.message);
+            sendEmail({
+              type: 'sendNewEventNotification',
+              eventTitle: input.title || 'Sem título',
+              promoterName,
+              promoterEmail,
+              eventDate: input.date || '',
+              venueName: input.venueName || input.venue?.name || '',
+              category: input.category || 'other',
             });
           }
         }
@@ -751,35 +744,18 @@ export const authApi = {
 
       console.log(`[authApi.sendVerificationCode] Code stored successfully for ${input.email}`);
 
-      console.log('[authApi.sendVerificationCode] Sending verification email via backend...');
+      console.log('[authApi.sendVerificationCode] Sending verification email via Supabase Edge Function...');
       try {
-        const backendUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-        if (backendUrl) {
-          const response = await fetch(`${backendUrl}/api/trpc/email.sendVerificationCode`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              json: {
-                email: input.email.toLowerCase(),
-                code,
-                name: input.name,
-              },
-            }),
-          });
-          const responseText = await response.text();
-          console.log('[authApi.sendVerificationCode] Raw response:', responseText?.substring(0, 200));
-          try {
-            const result = responseText ? JSON.parse(responseText) : null;
-            if (result?.result?.data?.json?.success) {
-              console.log('[authApi.sendVerificationCode] Email sent successfully');
-            } else {
-              console.warn('[authApi.sendVerificationCode] Email send response:', JSON.stringify(result));
-            }
-          } catch (parseErr: any) {
-            console.warn('[authApi.sendVerificationCode] Failed to parse response:', parseErr?.message);
-          }
+        const result = await sendEmail({
+          type: 'sendVerificationCode',
+          email: input.email.toLowerCase(),
+          code,
+          name: input.name,
+        });
+        if (result.success) {
+          console.log('[authApi.sendVerificationCode] Email sent successfully');
         } else {
-          console.warn('[authApi.sendVerificationCode] No backend URL configured, email not sent');
+          console.warn('[authApi.sendVerificationCode] Email send failed');
         }
       } catch (emailErr: any) {
         console.warn('[authApi.sendVerificationCode] Failed to send email (code still stored):', emailErr?.message);
@@ -1520,22 +1496,12 @@ export const promotersApi = {
 
         if (promoterEmail) {
           try {
-            const backendUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-            if (backendUrl) {
-              console.log('[promotersApi.approve] Sending approval email to:', promoterEmail);
-              const response = await fetch(`${backendUrl}/api/trpc/email.sendPromoterApprovalEmail`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  json: {
-                    promoterName,
-                    promoterEmail,
-                  },
-                }),
-              });
-              const responseText = await response.text();
-              console.log('[promotersApi.approve] Email response:', responseText?.substring(0, 200));
-            }
+            console.log('[promotersApi.approve] Sending approval email to:', promoterEmail);
+            await sendEmail({
+              type: 'sendPromoterApprovalEmail',
+              promoterName,
+              promoterEmail,
+            });
           } catch (emailErr: any) {
             console.warn('[promotersApi.approve] Failed to send approval email:', emailErr?.message);
           }

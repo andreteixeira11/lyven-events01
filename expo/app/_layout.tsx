@@ -13,7 +13,6 @@ import { NotificationsContext } from "@/hooks/notifications-context";
 import { ThemeProvider, useTheme } from "@/hooks/theme-context";
 import { OfflineProvider } from "@/hooks/offline-context";
 import { I18nProvider, useI18n } from "@/hooks/i18n-context";
-import { trpc, trpcClient } from "@/lib/trpc";
 
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -188,8 +187,7 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <GlobalErrorHandler>
-        <trpc.Provider client={trpcClient} queryClient={queryClient}>
-          <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}>
             <I18nProvider>
               <ThemeProvider>
                 <SafeProvider Provider={OfflineProvider}>
@@ -222,7 +220,6 @@ export default function RootLayout() {
               </ThemeProvider>
             </I18nProvider>
         </QueryClientProvider>
-        </trpc.Provider>
       </GlobalErrorHandler>
     </ErrorBoundary>
   );

@@ -22,6 +22,7 @@ import { api } from '@/lib/api';
 import { handleError } from '@/lib/error-handler';
 import { supabase } from '@/lib/supabase';
 import { promotersApi } from '@/lib/supabase-api';
+import { sendEmail } from '@/lib/email';
 
 const CODE_LENGTH = 6;
 const CODE_EXPIRY_MINUTES = 3;
@@ -287,21 +288,13 @@ export default function VerifyEmailScreen() {
         }
 
         try {
-          const backendUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-          if (backendUrl) {
-            console.log('📧 Sending admin notification email for new promoter...');
-            await fetch(`${backendUrl}/api/trpc/email.sendNewPromoterNotification`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                json: {
-                  promoterName: verifiedName,
-                  promoterEmail: verifiedEmail,
-                },
-              }),
-            });
-            console.log('✅ Admin notification email sent');
-          }
+          console.log('📧 Sending admin notification email for new promoter...');
+          await sendEmail({
+            type: 'sendNewPromoterNotification',
+            promoterName: verifiedName,
+            promoterEmail: verifiedEmail,
+          });
+          console.log('✅ Admin notification email sent');
         } catch (emailErr) {
           console.warn('⚠️ Failed to send admin notification email:', emailErr);
         }

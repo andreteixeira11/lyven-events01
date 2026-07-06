@@ -14,6 +14,7 @@ import { ArrowLeft, Mail, Bell, Calendar, TrendingUp, Users, Ticket, Heart } fro
 import { COLORS } from '@/constants/colors';
 import { useUser } from '@/hooks/user-context';
 import { supabase } from '@/lib/supabase';
+import { sendEmail } from '@/lib/email';
 
 type NotificationType = {
   id: string;
@@ -154,22 +155,16 @@ export default function EmailPreferences() {
       console.log('[EmailPreferences] Preferences saved successfully');
 
       try {
-        const backendUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-        if (backendUrl && user?.email) {
-          await fetch(`${backendUrl}/api/trpc/email.savePreferences`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              json: {
-                email: user.email,
-                name: user.name || 'Utilizador',
-                preferences: prefsObj,
-              },
-            }),
+        if (user?.email) {
+          await sendEmail({
+            type: 'savePreferences',
+            email: user.email,
+            name: user.name || 'Utilizador',
+            preferences: prefsObj,
           });
         }
       } catch (emailErr) {
-        console.warn('[EmailPreferences] Backend sync warning:', emailErr);
+        console.warn('[EmailPreferences] Sync warning:', emailErr);
       }
 
       Alert.alert('Sucesso', 'Preferências de email guardadas com sucesso!', [
