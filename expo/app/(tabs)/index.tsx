@@ -19,6 +19,7 @@ import { useI18n } from "@/hooks/i18n-context";
 import { router } from 'expo-router';
 import { Event, Advertisement } from '@/types/event';
 import { api } from '@/lib/api';
+import { FreeBadge, isFreeEvent } from '@/components/FreeBadge';
 import { handleError, isRetryableError } from '@/lib/error-handler';
 import { ErrorState, EventListSkeleton } from '@/components/LoadingStates';
 import { RefreshControl } from 'react-native';
@@ -156,6 +157,11 @@ function NormalUserExploreContent() {
       activeOpacity={0.9}
     >
       <Image source={{ uri: event.image }} style={styles.heroCardImage} />
+      {isFreeEvent(event) && (
+        <View style={styles.heroFreeBadge} pointerEvents="none">
+          <FreeBadge size="md" />
+        </View>
+      )}
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.85)']}
         style={styles.heroCardGradient}
@@ -201,7 +207,14 @@ function NormalUserExploreContent() {
         onPress={() => router.push(`/event/${event.id}` as any)}
         activeOpacity={0.8}
       >
-        <Image source={{ uri: event.image }} style={styles.eventListImage} />
+        <View style={styles.eventListImageWrap}>
+          <Image source={{ uri: event.image }} style={styles.eventListImage} />
+          {isFreeEvent(event) && (
+            <View style={styles.eventListFreeBadge} pointerEvents="none">
+              <FreeBadge size="sm" />
+            </View>
+          )}
+        </View>
         <View style={styles.eventListContent}>
           <Text style={[styles.eventListTitle, { color: colors.text }]} numberOfLines={2}>
             {event.title}
@@ -220,10 +233,16 @@ function NormalUserExploreContent() {
           </View>
           {minPrice !== null && (
             <View style={styles.eventListPriceRow}>
-              <Ticket size={13} color={colors.primary} />
-              <Text style={[styles.eventListPriceText, { color: colors.primary }]}>
-                {`Desde \u20ac${minPrice}`}
-              </Text>
+              {minPrice === 0 ? (
+                <FreeBadge size="sm" />
+              ) : (
+                <>
+                  <Ticket size={13} color={colors.primary} />
+                  <Text style={[styles.eventListPriceText, { color: colors.primary }]}>
+                    {`Desde \u20ac${minPrice}`}
+                  </Text>
+                </>
+              )}
             </View>
           )}
         </View>
@@ -701,6 +720,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  heroFreeBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    zIndex: 3,
+  },
   heroCardGradient: {
     position: 'absolute',
     bottom: 0,
@@ -781,10 +806,18 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  eventListImageWrap: {
+    position: 'relative',
+  },
   eventListImage: {
     width: 90,
     height: 100,
     resizeMode: 'cover',
+  },
+  eventListFreeBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
   },
   eventListContent: {
     flex: 1,

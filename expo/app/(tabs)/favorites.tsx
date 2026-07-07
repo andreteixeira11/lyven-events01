@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
 import { Event } from '@/types/event';
+import { FreeBadge, isFreeEvent } from '@/components/FreeBadge';
 
 export default function FavoritesScreen() {
   const { isFavorite, removeFromFavorites, hasReminder, shareEvent, addToCalendar } = useFavorites();
@@ -174,9 +175,13 @@ export default function FavoritesScreen() {
                   </View>
                   
                   <View style={styles.eventFooter}>
-                    <Text style={[styles.eventPrice, { color: colors.primary }]}>
-                      A partir de €{Math.min(...event.ticketTypes.map(t => t.price))}
-                    </Text>
+                    {isFreeEvent(event) ? (
+                      <FreeBadge size="sm" />
+                    ) : (
+                      <Text style={[styles.eventPrice, { color: colors.primary }]}>
+                        A partir de €{Math.min(...event.ticketTypes.map(t => t.price))}
+                      </Text>
+                    )}
                     <View style={styles.eventQuickActions}>
                       <TouchableOpacity 
                         style={[styles.quickAction, { backgroundColor: colors.primary }]}

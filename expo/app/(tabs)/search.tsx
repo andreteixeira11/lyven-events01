@@ -55,6 +55,7 @@ import { RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AdBanner from '@/components/AdBanner';
 import { Advertisement } from '@/types/event';
+import { FreeBadge, isFreeEvent } from '@/components/FreeBadge';
 
 interface AdminUser {
   id: string;
@@ -426,6 +427,11 @@ function NormalUserSearchContent() {
       activeOpacity={0.85}
     >
       <Image source={{ uri: event.image }} style={s.featuredCardImage} />
+      {isFreeEvent(event) && (
+        <View style={s.featuredFreeBadge} pointerEvents="none">
+          <FreeBadge size="md" />
+        </View>
+      )}
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.75)']}
         style={s.featuredCardOverlay}
@@ -467,7 +473,14 @@ function NormalUserSearchContent() {
       onPress={() => router.push(`/event/${event.id}` as any)}
       activeOpacity={0.8}
     >
-      <Image source={{ uri: event.image }} style={s.listEventImage} />
+      <View style={s.listEventImageWrap}>
+        <Image source={{ uri: event.image }} style={s.listEventImage} />
+        {isFreeEvent(event) && (
+          <View style={s.listEventFreeBadge} pointerEvents="none">
+            <FreeBadge size="sm" />
+          </View>
+        )}
+      </View>
       <View style={s.listEventInfo}>
         <Text style={[s.listEventTitle, { color: colors.text }]} numberOfLines={2}>
           {event.title}
@@ -518,7 +531,14 @@ function NormalUserSearchContent() {
       onPress={() => router.push(`/event/${event.id}` as any)}
       activeOpacity={0.8}
     >
-      <Image source={{ uri: event.image }} style={s.gridEventImage} />
+      <View style={s.gridEventImageWrap}>
+        <Image source={{ uri: event.image }} style={s.gridEventImage} />
+        {isFreeEvent(event) && (
+          <View style={s.gridEventFreeBadge} pointerEvents="none">
+            <FreeBadge size="sm" />
+          </View>
+        )}
+      </View>
       <View style={s.gridEventContent}>
         <Text style={[s.gridEventTitle, { color: colors.text }]} numberOfLines={2}>
           {event.title}
@@ -1719,6 +1739,7 @@ const s = StyleSheet.create({
   featuredScroll: { paddingHorizontal: 16, gap: 14 },
   featuredCard: { width: 280, height: 180, borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 6 },
   featuredCardImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  featuredFreeBadge: { position: 'absolute', top: 10, left: 10, zIndex: 3 },
   featuredCardOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '100%', justifyContent: 'flex-end' },
   featuredCardContent: { padding: 14 },
   featuredBadge: { flexDirection: 'row', alignSelf: 'flex-start', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, gap: 4, marginBottom: 6 },
@@ -1730,13 +1751,17 @@ const s = StyleSheet.create({
   featuredPriceText: { fontSize: 13, color: '#fff', fontWeight: 'bold' as const, marginLeft: 'auto' },
   eventsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 10 },
   gridEventCard: { width: '48%', borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6, elevation: 2, marginBottom: 4 },
+  gridEventImageWrap: { position: 'relative' },
   gridEventImage: { width: '100%', height: 120, resizeMode: 'cover' },
+  gridEventFreeBadge: { position: 'absolute', top: 6, left: 6 },
   gridEventContent: { padding: 10 },
   gridEventTitle: { fontSize: 13, fontWeight: '600' as const, marginBottom: 6, minHeight: 32 },
   gridEventRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 },
   gridEventMeta: { fontSize: 11, flex: 1 },
   listEventCard: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 10, borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6, elevation: 2 },
+  listEventImageWrap: { position: 'relative' },
   listEventImage: { width: 90, height: 90, resizeMode: 'cover' },
+  listEventFreeBadge: { position: 'absolute', top: 6, left: 6 },
   listEventInfo: { flex: 1, padding: 10, justifyContent: 'center' },
   listEventTitle: { fontSize: 14, fontWeight: '600' as const, marginBottom: 4 },
   listEventRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 },

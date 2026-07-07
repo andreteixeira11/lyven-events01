@@ -18,6 +18,7 @@ import { SocialProof } from '@/components/SocialProof';
 import { FOMOAlert } from '@/components/FOMOAlert';
 import { SeatMap, BALTAZAR_DIAS_SEAT_MAP } from '@/components/SeatMap';
 import { isBaltazarDiasVenue } from '@/constants/venue-seat-maps';
+import { FreeBadge, isFreeEvent } from '@/components/FreeBadge';
 import { useQueryClient } from '@tanstack/react-query';
 
 
@@ -460,6 +461,11 @@ export default function EventDetailScreen() {
           
           {/* Title and Date Overlay */}
           <View style={styles.heroOverlay}>
+            {isFreeEvent(event) && (
+              <View style={styles.heroFreeBadge}>
+                <FreeBadge size="md" />
+              </View>
+            )}
             <Text style={styles.heroTitle}>{event.title}</Text>
             <View style={styles.heroDateRow}>
               <Calendar size={16} color="#fff" />
@@ -628,7 +634,10 @@ export default function EventDetailScreen() {
           {/* Tickets */}
           {!event.isSoldOut && (
             <View style={styles.ticketsSection}>
-              <Text style={[styles.sectionTitle, { color: colors.primary }]}>Ingressos</Text>
+              <View style={styles.ticketsSectionHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.primary, marginBottom: 0 }]}>Ingressos</Text>
+                {isFreeEvent(event) && <FreeBadge size="md" />}
+              </View>
 
               {/* Seat selection for venues with numbered seats */}
               {hasSeatMap && (
@@ -641,6 +650,7 @@ export default function EventDetailScreen() {
                       <Text style={[styles.seatMapSubtitle, { color: colors.textSecondary }]}>
                         {event.venue.name} — Plateia numerada
                       </Text>
+                      {isFreeEvent(event) && <FreeBadge size="sm" style={{ marginTop: 4 }} />}
                     </View>
                     <TouchableOpacity
                       style={[styles.seatMapToggle, { backgroundColor: colors.primary }]}
@@ -689,7 +699,13 @@ export default function EventDetailScreen() {
                     {ticket.description && (
                       <Text style={[styles.ticketDescription, { color: colors.textSecondary }]}>{ticket.description}</Text>
                     )}
-                    <Text style={[styles.ticketPrice, { color: colors.primary }]}>€{ticket.price}</Text>
+                    {Number(ticket.price) === 0 ? (
+                      <View style={styles.freeTicketRow}>
+                        <FreeBadge size="md" />
+                      </View>
+                    ) : (
+                      <Text style={[styles.ticketPrice, { color: colors.primary }]}>€{ticket.price}</Text>
+                    )}
                     {ticket.available < 50 && (
                       <Text style={styles.ticketAvailable}>
                         Apenas {ticket.available} disponíveis
@@ -734,7 +750,7 @@ export default function EventDetailScreen() {
                     Preço por lugar
                   </Text>
                   <Text style={[styles.seatPriceValue, { color: colors.primary }]}>
-                    €{event.ticketTypes[0].price.toFixed(2)}
+                    {Number(event.ticketTypes[0].price) === 0 ? 'Grátis' : `€${event.ticketTypes[0].price.toFixed(2)}`}
                   </Text>
                 </View>
               )}
@@ -1078,6 +1094,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#333',
     lineHeight: 22,
+  },
+  ticketsSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: responsiveSpacing(12),
+  },
+  freeTicketRow: {
+    marginTop: responsiveSpacing(8),
+  },
+  heroFreeBadge: {
+    marginBottom: responsiveSpacing(8),
   },
   ticketsSection: {
     marginBottom: 100,
