@@ -36,6 +36,7 @@ interface EventFormData {
   time?: Date;
   durationType: EventDurationType;
   category: string;
+  isFreeEvent: boolean;
   ticketTypes: TicketTypeForm[];
   imageUrl: string;
   imageUri?: string;
@@ -69,6 +70,7 @@ export default function CreateEvent() {
     time: undefined,
     durationType: 'single',
     category: '',
+    isFreeEvent: false,
     ticketTypes: [
       {
         id: '1',
@@ -131,6 +133,7 @@ export default function CreateEvent() {
         time: eventTime,
         durationType: hasEndDate ? 'multi' : 'single',
         category: event.category,
+        isFreeEvent: (event.ticketTypes || []).some((tt: any) => parseFloat(tt.price) === 0),
         ticketTypes: ticketTypes.length > 0 ? ticketTypes : [
           {
             id: '1',
@@ -200,7 +203,7 @@ export default function CreateEvent() {
     const hasValidTicket = formData.ticketTypes.some(ticket => 
       ticket.name && ticket.name.trim() !== '' &&
       ticket.stage && ticket.stage.trim() !== '' &&
-      ticket.price && ticket.price.trim() !== '' &&
+      (formData.isFreeEvent || (ticket.price && ticket.price.trim() !== '')) &&
       ticket.quantity && ticket.quantity.trim() !== ''
     );
 
@@ -226,7 +229,7 @@ export default function CreateEvent() {
         return false;
       }
 
-      if (!ticket.price || ticket.price.trim() === '') {
+      if (!formData.isFreeEvent && (!ticket.price || ticket.price.trim() === '')) {
         Alert.alert('Erro', `Por favor, preencha o preço do bilhete ${i + 1}.`);
         return false;
       }
@@ -236,14 +239,15 @@ export default function CreateEvent() {
         return false;
       }
 
-      const price = parseFloat(ticket.price);
-      const quantity = parseInt(ticket.quantity);
-
-      if (isNaN(price) || price < 0) {
-        Alert.alert('Erro', `Preço inválido no bilhete ${i + 1}.`);
-        return false;
+      if (!formData.isFreeEvent) {
+        const price = parseFloat(ticket.price);
+        if (isNaN(price) || price < 0) {
+          Alert.alert('Erro', `Preço inválido no bilhete ${i + 1}.`);
+          return false;
+        }
       }
 
+      const quantity = parseInt(ticket.quantity);
       if (isNaN(quantity) || quantity <= 0) {
         Alert.alert('Erro', `Quantidade inválida no bilhete ${i + 1}.`);
         return false;
@@ -263,7 +267,7 @@ export default function CreateEvent() {
           id: newId,
           name: '',
           stage: '',
-          price: '',
+          price: prev.isFreeEvent ? '0' : '',
           quantity: '',
           description: '',
         },
@@ -336,11 +340,11 @@ export default function CreateEvent() {
         endDate: endDateStr || undefined,
         category: formData.category,
         ticketTypes: formData.ticketTypes.filter(t => 
-          t.name && t.stage && t.price && t.quantity
+          t.name && t.stage && t.quantity && (formData.isFreeEvent || t.price)
         ).map(t => ({
           name: t.name,
           stage: t.stage,
-          price: parseFloat(t.price),
+          price: formData.isFreeEvent ? 0 : parseFloat(t.price),
           available: parseInt(t.quantity),
           description: t.description || '',
         })),
@@ -415,11 +419,11 @@ export default function CreateEvent() {
         endDate: endDateStrP || undefined,
         category: formData.category,
         ticketTypes: formData.ticketTypes.filter(t => 
-          t.name && t.stage && t.price && t.quantity
+          t.name && t.stage && t.quantity && (formData.isFreeEvent || t.price)
         ).map(t => ({
           name: t.name,
           stage: t.stage,
-          price: parseFloat(t.price),
+          price: formData.isFreeEvent ? 0 : parseFloat(t.price),
           available: parseInt(t.quantity),
           description: t.description || '',
         })),
@@ -520,7 +524,7 @@ export default function CreateEvent() {
         const hasValidTicket = formData.ticketTypes.some(ticket => 
           ticket.name && ticket.name.trim() !== '' &&
           ticket.stage && ticket.stage.trim() !== '' &&
-          ticket.price && ticket.price.trim() !== '' &&
+          (formData.isFreeEvent || (ticket.price && ticket.price.trim() !== '')) &&
           ticket.quantity && ticket.quantity.trim() !== ''
         );
 
@@ -659,6 +663,17 @@ export default function CreateEvent() {
               {currentStep === 3 && (
                 <TicketsStep
                   tickets={formData.ticketTypes}
+                  isFreeEvent={formData.isFreeEvent}
+                  onToggleFree={(isFree) => {
+                    setFormData(prev => ({ ...prev, isFreeEvent: isFree }));
+                    if (isFree) {
+                      setFormData(prev => ({
+                        ...prev,
+                        isFreeEvent: true,
+                        ticketTypes: prev.ticketTypes.map(t => ({ ...t, price: '0' })),
+                      }));
+                    }
+                  }}
                   onAddTicket={addTicketType}
                   onRemoveTicket={removeTicketType}
                   onUpdateTicket={updateTicketType}

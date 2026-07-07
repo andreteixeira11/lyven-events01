@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { Ticket, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { Ticket, Plus, Trash2, ChevronDown, ChevronUp, Gift } from 'lucide-react-native';
 
 export interface TicketTypeForm {
   id: string;
@@ -20,6 +20,8 @@ export interface TicketTypeForm {
 
 interface TicketsStepProps {
   tickets: TicketTypeForm[];
+  isFreeEvent: boolean;
+  onToggleFree: (isFree: boolean) => void;
   onAddTicket: () => void;
   onRemoveTicket: (id: string) => void;
   onUpdateTicket: (id: string, field: keyof TicketTypeForm, value: string) => void;
@@ -42,6 +44,8 @@ const ticketStages = [
 
 export default function TicketsStep({
   tickets,
+  isFreeEvent,
+  onToggleFree,
   onAddTicket,
   onRemoveTicket,
   onUpdateTicket,
@@ -62,6 +66,9 @@ export default function TicketsStep({
   };
 
   const isTicketFilled = (ticket: TicketTypeForm): boolean => {
+    if (isFreeEvent) {
+      return !!(ticket.name && ticket.stage && ticket.quantity);
+    }
     return !!(ticket.name && ticket.stage && ticket.price && ticket.quantity);
   };
 
@@ -71,6 +78,29 @@ export default function TicketsStep({
       <Text style={styles.subtitle}>
         Configure os tipos de bilhetes disponíveis
       </Text>
+
+      <TouchableOpacity
+        style={[styles.freeEventCard, isFreeEvent && styles.freeEventCardActive]}
+        onPress={() => onToggleFree(!isFreeEvent)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.freeEventIcon, isFreeEvent && styles.freeEventIconActive]}>
+          <Gift size={22} color={isFreeEvent ? '#fff' : '#0099a8'} />
+        </View>
+        <View style={styles.freeEventContent}>
+          <Text style={[styles.freeEventTitle, isFreeEvent && styles.freeEventTitleActive]}>
+            Evento Gratuito
+          </Text>
+          <Text style={styles.freeEventDescription}>
+            {isFreeEvent
+              ? 'Todos os bilhetes serão gratuitos (€0.00)'
+              : 'Ative para criar um evento de entrada livre'}
+          </Text>
+        </View>
+        <View style={[styles.freeEventToggle, isFreeEvent && styles.freeEventToggleActive]}>
+          <View style={[styles.freeEventToggleKnob, isFreeEvent && styles.freeEventToggleKnobActive]} />
+        </View>
+      </TouchableOpacity>
 
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -104,7 +134,7 @@ export default function TicketsStep({
                   </Text>
                   {!isExpanded && isFilled && (
                     <Text style={styles.ticketSubtitle}>
-                      {ticket.stage} • €{ticket.price} • {ticket.quantity} bilhetes
+                      {ticket.stage} • {isFreeEvent ? 'Grátis' : `€${ticket.price}`} • {ticket.quantity} bilhetes
                     </Text>
                   )}
                 </View>
@@ -169,14 +199,20 @@ export default function TicketsStep({
                   <View style={styles.row}>
                     <View style={[styles.inputContainer, styles.halfWidth]}>
                       <Text style={styles.inputLabel}>Preço (€)</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={ticket.price}
-                        onChangeText={(text) => onUpdateTicket(ticket.id, 'price', text)}
-                        placeholder="0.00"
-                        placeholderTextColor="#999"
-                        keyboardType="numeric"
-                      />
+                      {isFreeEvent ? (
+                        <View style={[styles.input, styles.freePriceBox]}>
+                          <Text style={styles.freePriceText}>Grátis</Text>
+                        </View>
+                      ) : (
+                        <TextInput
+                          style={styles.input}
+                          value={ticket.price}
+                          onChangeText={(text) => onUpdateTicket(ticket.id, 'price', text)}
+                          placeholder="0.00"
+                          placeholderTextColor="#999"
+                          keyboardType="numeric"
+                        />
+                      )}
                     </View>
 
                     <View style={[styles.inputContainer, styles.halfWidth]}>
@@ -367,5 +403,79 @@ const styles = StyleSheet.create({
   },
   halfWidth: {
     flex: 1,
+  },
+  freeEventCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
+  },
+  freeEventCardActive: {
+    borderColor: '#0099a8',
+    backgroundColor: '#e0f5f7',
+  },
+  freeEventIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#e0f5f7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  freeEventIconActive: {
+    backgroundColor: '#0099a8',
+  },
+  freeEventContent: {
+    flex: 1,
+  },
+  freeEventTitle: {
+    fontSize: 17,
+    fontWeight: '700' as const,
+    color: '#333',
+    marginBottom: 2,
+  },
+  freeEventTitleActive: {
+    color: '#0099a8',
+  },
+  freeEventDescription: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+  },
+  freeEventToggle: {
+    width: 46,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#ddd',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  freeEventToggleActive: {
+    backgroundColor: '#0099a8',
+  },
+  freeEventToggleKnob: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#fff',
+  },
+  freeEventToggleKnobActive: {
+    alignSelf: 'flex-end',
+  },
+  freePriceBox: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#e0f5f7',
+    borderColor: '#0099a8',
+  },
+  freePriceText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#0099a8',
   },
 });
