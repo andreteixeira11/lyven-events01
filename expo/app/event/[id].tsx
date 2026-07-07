@@ -436,8 +436,11 @@ export default function EventDetailScreen() {
             <TouchableOpacity 
               style={styles.headerButton}
               onPress={() => router.back()}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <ChevronLeft size={24} color="#fff" />
+              <View style={styles.headerButtonInner}>
+                <ChevronLeft size={22} color="#fff" strokeWidth={2.5} />
+              </View>
             </TouchableOpacity>
             <View style={styles.headerRight}>
               <TouchableOpacity 
@@ -839,6 +842,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerButtonInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 2,
   },
   headerRight: {
     flexDirection: 'row',

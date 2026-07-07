@@ -613,6 +613,21 @@ export default function CheckoutScreen() {
         </View>
       )}
 
+      <View style={[styles.priceBreakdown, { backgroundColor: colors.card }, SHADOWS.sm]}>
+        <View style={styles.priceRow}>
+          <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Subtotal</Text>
+          <Text style={[styles.priceValue, { color: colors.text }]}>€{subtotal.toFixed(2)}</Text>
+        </View>
+        <View style={styles.priceRow}>
+          <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Taxa de Serviço (10%)</Text>
+          <Text style={[styles.priceValue, { color: colors.text }]}>€{serviceFee.toFixed(2)}</Text>
+        </View>
+        <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
+          <Text style={[styles.totalLabel, { color: colors.text }]}>Total</Text>
+          <Text style={[styles.totalValue, { color: colors.primary }]}>€{total.toFixed(2)}</Text>
+        </View>
+      </View>
+
       <View style={[styles.securityBadge, { backgroundColor: colors.card }]}>
         <Shield size={16} color={colors.success} />
         <Text style={[styles.securityText, { color: colors.textSecondary }]}>
