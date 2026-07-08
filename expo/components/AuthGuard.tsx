@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { useUser } from '@/hooks/user-context';
-import { COLORS } from '@/constants/colors';
+import { useTheme } from '@/hooks/theme-context';
 import { Lock } from 'lucide-react-native';
 
 interface AuthGuardProps {
@@ -11,26 +11,27 @@ interface AuthGuardProps {
 
 export default function AuthGuard({ children }: AuthGuardProps) {
   const { user, isLoading } = useUser();
+  const { colors } = useTheme();
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   if (!user) {
     return (
-      <View style={styles.loginPromptContainer}>
-        <View style={styles.loginPromptCard}>
-          <Lock size={40} color={COLORS.primary} />
-          <Text style={styles.loginPromptTitle}>Inicie Sessão</Text>
-          <Text style={styles.loginPromptText}>
+      <View style={[styles.loginPromptContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.loginPromptCard, { backgroundColor: colors.card }]}>
+          <Lock size={40} color={colors.primary} />
+          <Text style={[styles.loginPromptTitle, { color: colors.text }]}>Inicie Sessão</Text>
+          <Text style={[styles.loginPromptText, { color: colors.textSecondary }]}>
             Esta funcionalidade requer uma conta. Inicie sessão ou crie uma conta para continuar.
           </Text>
           <TouchableOpacity
-            style={styles.loginButton}
+            style={[styles.loginButton, { backgroundColor: colors.primary }]}
             onPress={() => router.push('/login')}
           >
             <Text style={styles.loginButtonText}>Entrar / Criar Conta</Text>
@@ -39,7 +40,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
             style={styles.browseButton}
             onPress={() => router.replace('/(tabs)')}
           >
-            <Text style={styles.browseButtonText}>Explorar Eventos</Text>
+            <Text style={[styles.browseButtonText, { color: colors.primary }]}>Explorar Eventos</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -48,8 +49,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   if (!user.isOnboardingComplete) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -62,39 +63,33 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
   },
   loginPromptContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0a0a0a',
     padding: 24,
   },
   loginPromptCard: {
     alignItems: 'center',
     padding: 32,
     borderRadius: 20,
-    backgroundColor: '#1a1a1a',
     width: '100%',
     maxWidth: 360,
   },
   loginPromptTitle: {
     fontSize: 22,
     fontWeight: 'bold' as const,
-    color: '#fff',
     marginTop: 16,
     marginBottom: 8,
   },
   loginPromptText: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center' as const,
     lineHeight: 20,
     marginBottom: 24,
   },
   loginButton: {
-    backgroundColor: COLORS.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 9999,
@@ -112,7 +107,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   browseButtonText: {
-    color: COLORS.primary,
     fontSize: 14,
     fontWeight: '500' as const,
   },
