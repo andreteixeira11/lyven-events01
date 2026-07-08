@@ -199,7 +199,7 @@ export default function LoginSheet({ visible, onClose, initialMode = 'login' }: 
           handleClose();
 
           if (isAdmin) {
-            router.replace('/admin-dashboard');
+            router.replace('/(tabs)');
           } else if (serverUserType === 'promoter') {
             try {
               const promoterProfile = await promotersApi.getByUserId({ userId: result.user.id });

@@ -111,7 +111,6 @@ function RootLayoutNav() {
       <Stack.Screen name="buyer-details/[id]" options={{ title: safeT('promoter.buyerDetails', 'Comprador'), presentation: 'card' }} />
       <Stack.Screen name="forgot-password" options={{ title: safeT('auth.resetPassword', 'Recuperar Palavra-passe'), presentation: 'card' }} />
       <Stack.Screen name="admin-ads" options={{ title: 'Anúncios', presentation: 'card' }} />
-      <Stack.Screen name="admin-login" options={{ headerShown: false, presentation: 'card' }} />
       <Stack.Screen name="pending-approval" options={{ headerShown: false, presentation: 'card' }} />
       <Stack.Screen name="theme-settings" options={{ title: safeT('theme.title', 'Tema'), presentation: 'card' }} />
       <Stack.Screen name="language" options={{ title: 'Idioma', presentation: 'card' }} />

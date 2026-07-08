@@ -422,7 +422,7 @@ function IndexContent() {
     </TouchableOpacity>
   );
 
-  if (user?.email === 'geral@lyven.pt') {
+  if (user?.userType === 'admin') {
     return (
       <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>

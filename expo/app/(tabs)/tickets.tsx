@@ -59,7 +59,7 @@ interface PendingAd {
 function TicketsContent() {
   const { user } = useUser();
 
-  if (user?.email === 'admin@lyven.com') {
+  if (user?.userType === 'admin') {
     return <AdminApprovalsContent />;
   }
 

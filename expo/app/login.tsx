@@ -25,8 +25,6 @@ import { promotersApi } from '@/lib/supabase-api';
 
 export default function LoginScreen() {
   const [userType, setUserType] = useState<'normal' | 'promoter'>('normal');
-  const [logoTapCount, setLogoTapCount] = useState(0);
-  const logoTapTimeout = useRef<number | null>(null);
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -55,18 +53,6 @@ export default function LoginScreen() {
   const loginMutation = api.auth.login.useMutation();
   const sendCodeMutation = api.auth.sendVerificationCode.useMutation();
 
-  const handleLogoTap = () => {
-    const newCount = logoTapCount + 1;
-    setLogoTapCount(newCount);
-    if (logoTapTimeout.current) clearTimeout(logoTapTimeout.current);
-    if (newCount >= 10) {
-      setLogoTapCount(0);
-      router.push('/admin-login');
-    } else {
-      logoTapTimeout.current = setTimeout(() => setLogoTapCount(0), 3000) as any;
-    }
-  };
-  
   const saveUser = async (userData: any) => {
     await updateUser(userData);
   };
@@ -193,7 +179,7 @@ export default function LoginScreen() {
           await saveUser(userData);
 
           if (isAdmin) {
-            router.replace('/admin-dashboard');
+            router.replace('/(tabs)');
           } else if (serverUserType === 'promoter') {
             try {
               console.log('[Login] Checking promoter approval status for user:', result.user.id);
@@ -304,13 +290,11 @@ export default function LoginScreen() {
                     },
                   ]}
                 >
-                  <TouchableOpacity onPress={handleLogoTap} activeOpacity={1}>
-                    <Image
-                      source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/r0eawa35sn5kfssq1aek9' }}
-                      style={styles.logoImage}
-                      resizeMode="contain"
-                    />
-                  </TouchableOpacity>
+                  <Image
+                    source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/r0eawa35sn5kfssq1aek9' }}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                  />
                 </Animated.View>
             </View>
 

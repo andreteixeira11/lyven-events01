@@ -46,8 +46,6 @@ export default function ProfileScreen() {
   const { theme, isDark, changeTheme, colors } = useTheme();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
-  const [tapCount, setTapCount] = useState(0);
-  const tapTimeoutRef = useRef<number | null>(null);
   const [loginSheetVisible, setLoginSheetVisible] = useState(false);
   const [loginSheetMode, setLoginSheetMode] = useState<'login' | 'register'>('login');
 
@@ -166,7 +164,7 @@ export default function ProfileScreen() {
     );
   }
 
-  const isAdmin = user?.email === 'geral@lyven.pt';
+  const isAdmin = user?.userType === 'admin';
   const isPromoter = user?.userType === 'promoter';
 
   const { data: profileByUser } = api.promoters.getByUserId.useQuery(
@@ -207,24 +205,6 @@ export default function ProfileScreen() {
       ? (nextEvent.ticketsSold / nextEvent.totalTickets) * 100
       : 0;
 
-  const handleLogoTap = () => {
-    const newTapCount = tapCount + 1;
-    setTapCount(newTapCount);
-
-    if (tapTimeoutRef.current) {
-      clearTimeout(tapTimeoutRef.current);
-    }
-
-    if (newTapCount >= 10) {
-      setTapCount(0);
-      router.push('/admin-login');
-    } else {
-      tapTimeoutRef.current = setTimeout(() => {
-        setTapCount(0);
-      }, 3000) as any;
-    }
-  };
-
   const handleLogout = () => {
     Alert.alert(
       t('auth.logout'),
@@ -239,7 +219,7 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             await logout();
-            router.replace('/login');
+            router.replace('/(tabs)');
           },
         },
       ]
@@ -392,9 +372,9 @@ export default function ProfileScreen() {
 
   const renderUserInfo = () => (
     <View style={[styles.userInfo, { backgroundColor: colors.primary }]}>
-      <TouchableOpacity style={[styles.avatar, { backgroundColor: colors.white }]} onPress={handleLogoTap} activeOpacity={0.7}>
+      <View style={[styles.avatar, { backgroundColor: colors.white }]}>
         <User size={32} color={colors.primary} />
-      </TouchableOpacity>
+      </View>
       <View style={styles.userDetails}>
         <Text style={[styles.userName, { color: colors.white }]}>{user?.name || t('auth.attendee')}</Text>
         <Text style={[styles.userEmail, { color: colors.white }]}>{user?.email}</Text>

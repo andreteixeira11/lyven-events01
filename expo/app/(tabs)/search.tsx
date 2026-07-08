@@ -75,7 +75,7 @@ interface AdminUser {
 function SearchContent() {
   const { user } = useUser();
 
-  if (user?.email === 'admin@lyven.com') {
+  if (user?.userType === 'admin') {
     return <AdminUsersContent />;
   }
 

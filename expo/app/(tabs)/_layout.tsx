@@ -24,7 +24,7 @@ export default function TabLayout() {
   const { colors } = useTheme();
   const totalItems = getTotalItems();
   const isPromoter = user?.userType === 'promoter';
-  const isAdmin = user?.email === 'geral@lyven.pt';
+  const isAdmin = user?.userType === 'admin';
 
   const AnimatedTabIcon = ({ 
     Icon, 
