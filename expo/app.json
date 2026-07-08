@@ -18,18 +18,15 @@
       "supportsTablet": true,
       "bundleIdentifier": "app.rork.lyven-events",
       "infoPlist": {
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
-        "NSLocationAlwaysUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
-        "NSLocationWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
-        "UIBackgroundModes": [
-          "location"
-        ],
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "LYVEN uses your location to show events near you and calculate distances to venues. For example, we use your location to display nearby concerts on the Explore and Search screens.",
+        "NSLocationAlwaysUsageDescription": "LYVEN uses your location to show events near you and calculate distances to venues. For example, we use your location to display nearby concerts on the Explore and Search screens.",
+        "NSLocationWhenInUseUsageDescription": "LYVEN uses your location to show events near you and calculate distances to venues. For example, we use your location to display nearby concerts on the Explore and Search screens.",
         "NSCalendarsUsageDescription": "Allow $(PRODUCT_NAME) to access your calendar",
         "NSRemindersUsageDescription": "Allow $(PRODUCT_NAME) to access your reminders",
-        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera",
+        "NSCameraUsageDescription": "LYVEN needs camera access so you can take a photo for your profile picture. For example, you can snap a selfie and set it as your avatar.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone",
         "NSFaceIDUsageDescription": "Allow $(PRODUCT_NAME) to use Face ID.",
-        "NSPhotoLibraryUsageDescription": "Allow $(PRODUCT_NAME) to access your photos",
+        "NSPhotoLibraryUsageDescription": "LYVEN needs photo library access so you can choose a photo for your profile picture. For example, you can select a photo from your gallery and set it as your avatar.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -44,8 +41,7 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_LOCATION",
-        "android.permission.ACCESS_BACKGROUND_LOCATION",
+
         "android.permission.READ_CALENDAR",
         "android.permission.WRITE_CALENDAR",
         "android.permission.RECEIVE_BOOT_COMPLETED",
@@ -72,10 +68,11 @@
       [
         "expo-location",
         {
-          "isAndroidForegroundServiceEnabled": true,
-          "isAndroidBackgroundLocationEnabled": true,
-          "isIosBackgroundLocationEnabled": true,
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+          "isAndroidForegroundServiceEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false,
+          "isIosBackgroundLocationEnabled": false,
+          "locationAlwaysAndWhenInUsePermission": "LYVEN uses your location to show events near you and calculate distances to venues.",
+          "locationWhenInUsePermission": "LYVEN uses your location to show events near you and calculate distances to venues."
         }
       ],
       [
@@ -101,7 +98,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you share them with your friends."
+          "photosPermission": "LYVEN needs photo library access so you can choose a photo for your profile picture."
         }
       ],
       "expo-localization",

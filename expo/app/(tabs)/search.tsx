@@ -45,7 +45,6 @@ import {
 import { COLORS } from '@/constants/colors';
 import { useTheme } from '@/hooks/theme-context';
 import { useUser } from '@/hooks/user-context';
-import AuthGuard from '@/components/AuthGuard';
 import { Event } from '@/types/event';
 import { api } from '@/lib/api';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -1676,11 +1675,7 @@ function PromoterEventsContent() {
 }
 
 export default function SearchScreen() {
-  return (
-    <AuthGuard>
-      <SearchContent />
-    </AuthGuard>
-  );
+  return <SearchContent />;
 }
 
 const s = StyleSheet.create({

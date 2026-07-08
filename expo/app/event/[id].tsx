@@ -175,6 +175,17 @@ export default function EventDetailScreen() {
   };
 
   const handleAddToCart = () => {
+    if (!user) {
+      Alert.alert(
+        'Inicie Sessão',
+        'É necessário iniciar sessão para comprar bilhetes. Deseja entrar agora?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Entrar', onPress: () => router.push('/login') },
+        ]
+      );
+      return;
+    }
     if (Platform.OS !== 'web') {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }

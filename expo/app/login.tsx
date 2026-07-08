@@ -498,6 +498,15 @@ export default function LoginScreen() {
                 </Text>
               </TouchableOpacity>
 
+              <TouchableOpacity
+                style={styles.guestButton}
+                onPress={() => router.replace('/(tabs)')}
+              >
+                <Text style={[styles.guestText, { color: colors.textSecondary }]}>
+                  Explorar eventos sem conta
+                </Text>
+              </TouchableOpacity>
+
               {userType === 'promoter' && !isLogin && (
                 <View style={[styles.promoterInfoBox, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' }]}>
                   <Building2 size={16} color={colors.primary} />
@@ -629,6 +638,13 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     fontSize: 14,
     fontWeight: '600' as const,
+  },
+  guestButton: {
+    marginTop: SPACING.lg,
+    alignItems: 'center',
+  },
+  guestText: {
+    fontSize: 13,
   },
   errorContainer: {
     borderRadius: RADIUS.md,

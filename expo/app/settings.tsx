@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import {
@@ -22,10 +23,12 @@ import {
   Smartphone,
   Mail,
   Lock,
+  Trash2,
 } from 'lucide-react-native';
 import { useUser } from '@/hooks/user-context';
 import { useTheme } from '@/hooks/theme-context';
 import { RADIUS, SHADOWS, SPACING } from '@/constants/colors';
+import { api } from '@/lib/api';
 
 const getLanguageName = (code?: string) => {
   const languages: Record<string, string> = {
@@ -52,6 +55,8 @@ export default function Settings() {
   const { colors } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const deleteUserMutation = api.users.delete.useMutation();
 
   const handleLogout = () => {
     Alert.alert(
@@ -68,6 +73,61 @@ export default function Settings() {
           onPress: async () => {
             await logout();
             router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Eliminar Conta',
+      'Tem a certeza que deseja eliminar a sua conta? Esta ação é permanente e não pode ser desfeita. Todos os seus dados serão removidos.',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Confirmar Eliminação',
+              'Digite "ELIMINAR" para confirmar. Esta ação não pode ser desfeita.',
+              [
+                {
+                  text: 'Cancelar',
+                  style: 'cancel',
+                },
+                {
+                  text: 'Confirmar Eliminação',
+                  style: 'destructive',
+                  onPress: async () => {
+                    if (!user?.id) {
+                      Alert.alert('Erro', 'Não foi possível identificar a sua conta.');
+                      return;
+                    }
+                    setIsDeletingAccount(true);
+                    try {
+                      await deleteUserMutation.mutateAsync({ id: user.id });
+                      await logout();
+                      Alert.alert('Conta Eliminada', 'A sua conta foi eliminada com sucesso.', [
+                        { text: 'OK', onPress: () => router.replace('/login') },
+                      ]);
+                    } catch (error) {
+                      console.error('Account deletion error:', error);
+                      Alert.alert(
+                        'Erro',
+                        'Não foi possível eliminar a sua conta. Por favor, tente novamente ou contacte o suporte em geral@lyven.pt.'
+                      );
+                    } finally {
+                      setIsDeletingAccount(false);
+                    }
+                  },
+                },
+              ]
+            );
           },
         },
       ]
@@ -223,9 +283,23 @@ export default function Settings() {
         </View>
 
         <View style={[styles.section, { backgroundColor: colors.card }, SHADOWS.sm]}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} disabled={isDeletingAccount}>
             <LogOut size={20} color={colors.error} />
             <Text style={[styles.logoutText, { color: colors.error }]}>Terminar Sessão</Text>
+          </TouchableOpacity>
+        </View>
+
+        <SectionHeader title="Zona de Perigo" />
+        <View style={[styles.section, { backgroundColor: colors.card }, SHADOWS.sm]}>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleDeleteAccount} disabled={isDeletingAccount}>
+            {isDeletingAccount ? (
+              <ActivityIndicator size="small" color={colors.error} />
+            ) : (
+              <Trash2 size={20} color={colors.error} />
+            )}
+            <Text style={[styles.logoutText, { color: colors.error }]}>
+              {isDeletingAccount ? 'A eliminar...' : 'Eliminar Conta'}
+            </Text>
           </TouchableOpacity>
         </View>
 

@@ -31,6 +31,7 @@ import { useTheme } from '@/hooks/theme-context';
 import { useI18n } from '@/hooks/i18n-context';
 import { router } from 'expo-router';
 import { api } from '@/lib/api';
+import AuthGuard from '@/components/AuthGuard';
 
 export default function ProfileScreen() {
   const { user, logout } = useUser();
@@ -39,6 +40,14 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const [tapCount, setTapCount] = useState(0);
   const tapTimeoutRef = useRef<number | null>(null);
+
+  if (!user) {
+    return (
+      <AuthGuard>
+        <View />
+      </AuthGuard>
+    );
+  }
 
   const isAdmin = user?.email === 'geral@lyven.pt';
   const isPromoter = user?.userType === 'promoter';

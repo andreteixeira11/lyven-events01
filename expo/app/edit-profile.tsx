@@ -8,9 +8,11 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Image as RNImage,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, User, Camera } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '@/hooks/user-context';
 import { COLORS } from '@/constants/colors';
 
@@ -21,6 +23,55 @@ export default function EditProfile() {
   const [phone, setPhone] = useState('');
   const [bio, setBio] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+  const handlePickAvatar = async () => {
+    Alert.alert(
+      'Alterar Foto',
+      'Escolha uma opção',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Tirar Foto',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permissão negada', 'É necessário permitir o acesso à câmara para tirar uma foto.');
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets?.[0]?.uri) {
+              setAvatarUri(result.assets[0].uri);
+            }
+          },
+        },
+        {
+          text: 'Escolher da Galeria',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permissão negada', 'É necessário permitir o acesso à galeria para escolher uma foto.');
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets?.[0]?.uri) {
+              setAvatarUri(result.assets[0].uri);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -74,9 +125,13 @@ export default function EditProfile() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
-            <User size={40} color={COLORS.white} />
+            {avatarUri ? (
+              <RNImage source={{ uri: avatarUri }} style={styles.avatarImage} />
+            ) : (
+              <User size={40} color={COLORS.white} />
+            )}
           </View>
-          <TouchableOpacity style={styles.cameraButton}>
+          <TouchableOpacity style={styles.cameraButton} onPress={handlePickAvatar} activeOpacity={0.7}>
             <Camera size={18} color={COLORS.white} />
           </TouchableOpacity>
         </View>
@@ -181,6 +236,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   cameraButton: {
     position: 'absolute',

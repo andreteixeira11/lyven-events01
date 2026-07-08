@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import AuthGuard from "@/components/AuthGuard";
 import PromoterDashboard from "@/components/PromoterDashboard";
 import AdBanner from "@/components/AdBanner";
 import { useUser } from "@/hooks/user-context";
@@ -529,11 +528,7 @@ function IndexContent() {
 }
 
 export default function IndexScreen() {
-  return (
-    <AuthGuard>
-      <IndexContent />
-    </AuthGuard>
-  );
+  return <IndexContent />;
 }
 
 const styles = StyleSheet.create({
