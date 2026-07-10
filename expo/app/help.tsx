@@ -219,9 +219,6 @@ export default function Help() {
               })}
             </View>
           </ScrollView>
-
-      
-      </KeyboardAvoidingView>
         </View>
 
         <View style={[styles.faqSection, { backgroundColor: colors.card }, SHADOWS.sm]}>
@@ -310,6 +307,7 @@ export default function Help() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+    </KeyboardAvoidingView>
     </View>
   );
 }

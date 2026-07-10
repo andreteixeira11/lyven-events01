@@ -10,6 +10,7 @@ import {
   Alert,
   TextInput,
   KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { 

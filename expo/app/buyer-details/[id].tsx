@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
-  Switch
+  Switch,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';

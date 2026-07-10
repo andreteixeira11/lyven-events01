@@ -404,8 +404,6 @@ export default function TicketDetailsScreen() {
             )}
           </ScrollView>
 
-        </KeyboardAvoidingView>
-
           <View style={styles.dotsContainer}>
             {tickets.map((_, index) => (
               <View
@@ -669,6 +667,7 @@ export default function TicketDetailsScreen() {
             </View>
           </View>
         </Modal>
+      </KeyboardAvoidingView>
       </View>
     </>
   );

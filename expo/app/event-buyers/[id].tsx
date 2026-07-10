@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
-  Alert
+  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
