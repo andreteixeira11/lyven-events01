@@ -121,6 +121,7 @@ export const api = {
     list: createQueryHook(['advertisements', 'list'], advertisementsApi.list),
     listPending: createQueryHook(['advertisements', 'listPending'], advertisementsApi.listPending),
     approve: createMutationHook(advertisementsApi.approve),
+    reject: createMutationHook(advertisementsApi.reject),
     recordImpression: createMutationHook(advertisementsApi.recordImpression),
     recordClick: createMutationHook(advertisementsApi.recordClick),
     stats: createQueryHook(['advertisements', 'stats'], advertisementsApi.stats),
@@ -207,6 +208,7 @@ export const api = {
     promoters: createQueryHook(['analytics', 'promoters'], analyticsApi.promoters),
     revenue: createQueryHook(['analytics', 'revenue'], analyticsApi.revenue),
     users: createQueryHook(['analytics', 'users'], analyticsApi.users),
+    commissions: createQueryHook(['analytics', 'commissions'], analyticsApi.commissions),
   },
   adminSettings: {
     get: createQueryHook(['adminSettings', 'get'], adminSettingsApi.get),

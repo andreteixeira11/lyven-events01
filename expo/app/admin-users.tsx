@@ -173,6 +173,8 @@ export default function AdminUsers() {
   const promoters = users.filter(u => u.userType === 'promoter').length;
   const normalUsers = users.filter(u => u.userType === 'normal').length;
 
+  const [userTypeTab, setUserTypeTab] = useState<'all' | 'normal' | 'promoter' | 'admin'>('all');
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{
@@ -196,6 +198,30 @@ export default function AdminUsers() {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refetch()} />}
       >
+        <View style={styles.userTypeTabs}>
+          {([
+            { key: 'all' as const, label: 'Todos', count: totalUsers },
+            { key: 'normal' as const, label: 'Utilizadores', count: normalUsers },
+            { key: 'promoter' as const, label: 'Promotores', count: promoters },
+            { key: 'admin' as const, label: 'Admins', count: users.filter(u => u.userType === 'admin').length },
+          ]).map(tab => (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.userTypeTab, userTypeTab === tab.key && styles.userTypeTabActive]}
+              onPress={() => { setUserTypeTab(tab.key); setFilterType(tab.key); }}
+            >
+              <Text style={[styles.userTypeTabText, userTypeTab === tab.key && styles.userTypeTabTextActive]}>
+                {tab.label}
+              </Text>
+              <View style={[styles.userTypeTabBadge, userTypeTab === tab.key && styles.userTypeTabBadgeActive]}>
+                <Text style={[styles.userTypeTabBadgeText, userTypeTab === tab.key && styles.userTypeTabBadgeTextActive]}>
+                  {tab.count}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
             <Search size={20} color={COLORS.textSecondary} />
@@ -429,6 +455,24 @@ export default function AdminUsers() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { flex: 1, padding: 20 },
+  userTypeTabs: {
+    flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 9999, padding: 4, marginBottom: 15,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
+  },
+  userTypeTab: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 10, paddingHorizontal: 6, borderRadius: 9999, gap: 4,
+  },
+  userTypeTabActive: { backgroundColor: COLORS.primary },
+  userTypeTabText: { fontSize: 12, fontWeight: '600' as const, color: COLORS.textSecondary },
+  userTypeTabTextActive: { color: COLORS.white },
+  userTypeTabBadge: {
+    backgroundColor: COLORS.lightGray, borderRadius: 10, minWidth: 18, height: 18,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
+  },
+  userTypeTabBadgeActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
+  userTypeTabBadgeText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: 'bold' as const },
+  userTypeTabBadgeTextActive: { color: COLORS.white },
   searchContainer: { flexDirection: 'row', marginBottom: 15, gap: 10 },
   searchInputContainer: {
     flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white,

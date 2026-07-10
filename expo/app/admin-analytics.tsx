@@ -10,9 +10,9 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { 
-  BarChart3, 
-  Users, 
+import {
+  BarChart3,
+  Users,
   Calendar,
   DollarSign,
   Target,
@@ -20,6 +20,8 @@ import {
   MapPin,
   User,
   LogOut,
+  Percent,
+  TrendingUp,
 } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
 import { useUser } from '@/hooks/user-context';
@@ -32,8 +34,17 @@ export default function AdminAnalytics() {
   const { data: dashboardData, isLoading: dashboardLoading, refetch: refetchDashboard } = api.analytics.dashboard.useQuery({ period: selectedPeriod });
   const { data: analyticsEventsData, isLoading: eventsLoading } = api.analytics.events.useQuery();
   const { data: rawEvents = [] } = api.events.list.useQuery();
+  const { data: commissionData, isLoading: commissionLoading } = api.analytics.commissions.useQuery({ period: selectedPeriod });
 
   const stats = useMemo(() => dashboardData || { totalUsers: 0, totalEvents: 0, totalTickets: 0, totalRevenue: 0, periodTickets: 0, periodRevenue: 0, pendingEvents: 0, pendingPromoters: 0, activeAds: 0 }, [dashboardData]);
+
+  const commission = useMemo(() => commissionData || {
+    totalCommission: 0, totalVolume: 0,
+    tier1Count: 0, tier1Commission: 0,
+    tier2Count: 0, tier2Commission: 0,
+    tier3Count: 0, tier3Commission: 0,
+    perEvent: [],
+  }, [commissionData]);
 
   const topEvents = useMemo(() => {
     const analyticsEvents = analyticsEventsData?.events || [];
@@ -76,7 +87,7 @@ export default function AdminAnalytics() {
     ]);
   };
 
-  const formatCurrency = (value: number) => `€${value.toLocaleString()}`;
+  const formatCurrency = (value: number) => `€${value.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const isLoading = dashboardLoading || eventsLoading;
 
   const StatCard = ({ title, value, icon: Icon, color = COLORS.primary }: {
@@ -229,6 +240,118 @@ export default function AdminAnalytics() {
                   </View>
                 </View>
               )}
+
+              {/* Commission Breakdown */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Comissões da Plataforma</Text>
+
+                {commissionLoading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  </View>
+                ) : (
+                  <>
+                    {/* Summary cards */}
+                    <View style={styles.commissionSummaryRow}>
+                      <View style={[styles.commissionSummaryCard, { borderLeftColor: COLORS.success }]}>
+                        <View style={[styles.statIconContainer, { backgroundColor: COLORS.success + '20' }]}>
+                          <DollarSign size={20} color={COLORS.success} />
+                        </View>
+                        <Text style={styles.commissionSummaryValue}>{formatCurrency(commission.totalCommission)}</Text>
+                        <Text style={styles.commissionSummaryLabel}>Comissão Total</Text>
+                      </View>
+                      <View style={[styles.commissionSummaryCard, { borderLeftColor: COLORS.primary }]}>
+                        <View style={[styles.statIconContainer, { backgroundColor: COLORS.primary + '20' }]}>
+                          <TrendingUp size={20} color={COLORS.primary} />
+                        </View>
+                        <Text style={styles.commissionSummaryValue}>{formatCurrency(commission.totalVolume)}</Text>
+                        <Text style={styles.commissionSummaryLabel}>Volume Total</Text>
+                      </View>
+                    </View>
+
+                    {/* Tier breakdown */}
+                    <View style={styles.commissionTiersCard}>
+                      <Text style={styles.commissionTierHeader}>Escalões de Comissão</Text>
+
+                      {/* Tier 1 */}
+                      <View style={styles.commissionTierRow}>
+                        <View style={[styles.commissionTierBadge, { backgroundColor: COLORS.success + '15' }]}>
+                          <Percent size={14} color={COLORS.success} />
+                        </View>
+                        <View style={styles.commissionTierInfo}>
+                          <Text style={styles.commissionTierTitle}>Até €20.00</Text>
+                          <Text style={styles.commissionTierRate}>5.0% + €0.50</Text>
+                        </View>
+                        <View style={styles.commissionTierStats}>
+                          <Text style={styles.commissionTierCount}>{commission.tier1Count} bilhetes</Text>
+                          <Text style={[styles.commissionTierAmount, { color: COLORS.success }]}>
+                            {formatCurrency(commission.tier1Commission)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.commissionDivider} />
+
+                      {/* Tier 2 */}
+                      <View style={styles.commissionTierRow}>
+                        <View style={[styles.commissionTierBadge, { backgroundColor: COLORS.warning + '15' }]}>
+                          <Percent size={14} color={COLORS.warning} />
+                        </View>
+                        <View style={styles.commissionTierInfo}>
+                          <Text style={styles.commissionTierTitle}>€20.01 a €50.00</Text>
+                          <Text style={styles.commissionTierRate}>4.5% + €0.60</Text>
+                        </View>
+                        <View style={styles.commissionTierStats}>
+                          <Text style={styles.commissionTierCount}>{commission.tier2Count} bilhetes</Text>
+                          <Text style={[styles.commissionTierAmount, { color: COLORS.warning }]}>
+                            {formatCurrency(commission.tier2Commission)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.commissionDivider} />
+
+                      {/* Tier 3 */}
+                      <View style={styles.commissionTierRow}>
+                        <View style={[styles.commissionTierBadge, { backgroundColor: COLORS.info + '15' }]}>
+                          <Percent size={14} color={COLORS.info} />
+                        </View>
+                        <View style={styles.commissionTierInfo}>
+                          <Text style={styles.commissionTierTitle}>Acima de €50.00</Text>
+                          <Text style={styles.commissionTierRate}>3.5% + €1.00</Text>
+                        </View>
+                        <View style={styles.commissionTierStats}>
+                          <Text style={styles.commissionTierCount}>{commission.tier3Count} bilhetes</Text>
+                          <Text style={[styles.commissionTierAmount, { color: COLORS.info }]}>
+                            {formatCurrency(commission.tier3Commission)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Per-event commission */}
+                    {commission.perEvent && commission.perEvent.length > 0 && (
+                      <View style={styles.commissionTiersCard}>
+                        <Text style={styles.commissionTierHeader}>Comissão por Evento</Text>
+                        {commission.perEvent.slice(0, 8).map((e: any, i: number) => (
+                          <View key={e.eventId}>
+                            {i > 0 && <View style={styles.commissionDivider} />}
+                            <View style={styles.commissionEventRow}>
+                              <View style={styles.commissionEventInfo}>
+                                <Text style={styles.commissionEventTitle} numberOfLines={1}>{e.title}</Text>
+                                <Text style={styles.commissionEventMeta}>{e.ticketCount} bilhetes · {formatCurrency(e.volume)}</Text>
+                              </View>
+                              <Text style={styles.commissionEventAmount}>
+                                {formatCurrency(e.commission)}
+                              </Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
             </>
           )}
           <View style={{ height: 40 }} />
@@ -294,6 +417,32 @@ const styles = StyleSheet.create({
   metaText: { fontSize: 12, color: COLORS.textSecondary },
   loadingContainer: { alignItems: 'center', paddingVertical: 60, gap: 12 },
   loadingText: { fontSize: 14, color: COLORS.textSecondary },
+  commissionSummaryRow: { flexDirection: 'row', gap: 15, marginBottom: 15 },
+  commissionSummaryCard: {
+    flex: 1, backgroundColor: COLORS.white, borderRadius: 12, padding: 20, borderLeftWidth: 4, alignItems: 'flex-start',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+  },
+  commissionSummaryValue: { fontSize: 22, fontWeight: 'bold' as const, color: COLORS.text, marginTop: 10, marginBottom: 4 },
+  commissionSummaryLabel: { fontSize: 13, color: COLORS.textSecondary },
+  commissionTiersCard: {
+    backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 15,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+  },
+  commissionTierHeader: { fontSize: 16, fontWeight: 'bold' as const, color: COLORS.text, marginBottom: 16 },
+  commissionTierRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  commissionTierBadge: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  commissionTierInfo: { flex: 1 },
+  commissionTierTitle: { fontSize: 15, fontWeight: '600' as const, color: COLORS.text, marginBottom: 2 },
+  commissionTierRate: { fontSize: 13, color: COLORS.textSecondary },
+  commissionTierStats: { alignItems: 'flex-end' },
+  commissionTierCount: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 2 },
+  commissionTierAmount: { fontSize: 16, fontWeight: 'bold' as const },
+  commissionDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: 14 },
+  commissionEventRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  commissionEventInfo: { flex: 1, marginRight: 12 },
+  commissionEventTitle: { fontSize: 14, fontWeight: '600' as const, color: COLORS.text, marginBottom: 3 },
+  commissionEventMeta: { fontSize: 12, color: COLORS.textSecondary },
+  commissionEventAmount: { fontSize: 15, fontWeight: 'bold' as const, color: COLORS.success },
   profileButton: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, marginRight: 15, gap: 6,

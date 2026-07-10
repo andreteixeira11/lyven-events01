@@ -12,6 +12,7 @@ import { useTheme } from "@/hooks/theme-context";
 import { RADIUS, SHADOWS, SPACING } from "@/constants/colors";
 import { useQueryClient } from '@tanstack/react-query';
 import BackButton from '@/components/BackButton';
+import LoginSheet from '@/components/LoginSheet';
 
 type PaymentMethod = 'card' | 'mbway' | 'multibanco';
 type CheckoutStep = 'review' | 'payment' | 'confirm';
@@ -26,6 +27,7 @@ export default function CheckoutScreen() {
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('card');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showMultibancoModal, setShowMultibancoModal] = useState(false);
+  const [showLoginSheet, setShowLoginSheet] = useState(false);
   
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
@@ -178,7 +180,7 @@ export default function CheckoutScreen() {
 
   const handlePurchase = async () => {
     if (!user) {
-      Alert.alert('Erro', 'É necessário iniciar sessão para comprar bilhetes.');
+      setShowLoginSheet(true);
       return;
     }
 
@@ -803,6 +805,11 @@ export default function CheckoutScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      <LoginSheet 
+        visible={showLoginSheet} 
+        onClose={() => setShowLoginSheet(false)} 
+      />
 
       <Modal visible={showSuccessModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>

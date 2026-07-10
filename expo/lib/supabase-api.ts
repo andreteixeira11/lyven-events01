@@ -1705,6 +1705,16 @@ export const advertisementsApi = {
     }
   },
 
+  reject: async (input: { id: string }): Promise<{ success: boolean }> => {
+    try {
+      await supabase.from('advertisements').delete().eq('id', input.id);
+      return { success: true };
+    } catch (err) {
+      console.error('[advertisementsApi.reject] error:', err);
+      throw err;
+    }
+  },
+
   recordImpression: async (input: { id: string }): Promise<{ success: boolean }> => {
     try {
       const { data: ad } = await supabase.from('advertisements').select('impressions').eq('id', input.id).single();
@@ -2364,6 +2374,98 @@ export const analyticsApi = {
       return { users: data || [] };
     } catch {
       return { users: [] };
+    }
+  },
+
+  commissions: async (input?: { period?: 'week' | 'month' | 'year' }): Promise<any> => {
+    try {
+      const period = input?.period || 'month';
+      const now = new Date();
+      let startDate = new Date(0);
+      if (period === 'week') startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      else if (period === 'month') startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      else if (period === 'year') startDate = new Date(now.getFullYear(), 0, 1);
+
+      const { data: tickets } = await supabase.from('tickets')
+        .select('id, event_id, price, quantity, purchase_date')
+        .gte('purchase_date', startDate.toISOString())
+        .order('purchase_date', { ascending: false });
+
+      if (!tickets || tickets.length === 0) {
+        return {
+          totalCommission: 0,
+          totalVolume: 0,
+          tier1Count: 0, tier1Commission: 0,
+          tier2Count: 0, tier2Commission: 0,
+          tier3Count: 0, tier3Commission: 0,
+          perEvent: [],
+        };
+      }
+
+      const tiers = [
+        { name: 'Até €20.00', min: 0, max: 20, percent: 0.05, fixed: 0.50 },
+        { name: '€20.01 - €50.00', min: 20.01, max: 50, percent: 0.045, fixed: 0.60 },
+        { name: 'Acima de €50.00', min: 50.01, max: Infinity, percent: 0.035, fixed: 1.00 },
+      ];
+
+      const calcCommission = (price: number): { tier: number; commission: number } => {
+        for (let i = 0; i < tiers.length; i++) {
+          if (price >= tiers[i].min && price <= tiers[i].max) {
+            return { tier: i, commission: price * tiers[i].percent + tiers[i].fixed };
+          }
+        }
+        const last = tiers[tiers.length - 1];
+        return { tier: tiers.length - 1, commission: price * last.percent + last.fixed };
+      };
+
+      let totalCommission = 0;
+      let totalVolume = 0;
+      const tierCounts = [0, 0, 0];
+      const tierCommissions = [0, 0, 0];
+      const eventMap: Record<string, { eventId: string; volume: number; commission: number; ticketCount: number }> = {};
+
+      for (const t of tickets) {
+        const price = t.price || 0;
+        const qty = t.quantity || 1;
+        const lineTotal = price * qty;
+        totalVolume += lineTotal;
+
+        for (let q = 0; q < qty; q++) {
+          const { tier, commission } = calcCommission(price);
+          totalCommission += commission;
+          tierCounts[tier]++;
+          tierCommissions[tier] += commission;
+
+          if (!eventMap[t.event_id]) {
+            eventMap[t.event_id] = { eventId: t.event_id, volume: 0, commission: 0, ticketCount: 0 };
+          }
+          eventMap[t.event_id].volume += price;
+          eventMap[t.event_id].commission += commission;
+          eventMap[t.event_id].ticketCount++;
+        }
+      }
+
+      const eventIds = Object.keys(eventMap);
+      const { data: eventData } = await supabase.from('events')
+        .select('id, title').in('id', eventIds);
+      const eventTitleMap: Record<string, string> = {};
+      (eventData || []).forEach((e: any) => { eventTitleMap[e.id] = e.title || 'Sem título'; });
+
+      const perEvent = Object.values(eventMap)
+        .map(e => ({ ...e, title: eventTitleMap[e.eventId] || 'Sem título' }))
+        .sort((a, b) => b.commission - a.commission)
+        .slice(0, 10);
+
+      return {
+        totalCommission: parseFloat(totalCommission.toFixed(2)),
+        totalVolume: parseFloat(totalVolume.toFixed(2)),
+        tier1Count: tierCounts[0], tier1Commission: parseFloat(tierCommissions[0].toFixed(2)),
+        tier2Count: tierCounts[1], tier2Commission: parseFloat(tierCommissions[1].toFixed(2)),
+        tier3Count: tierCounts[2], tier3Commission: parseFloat(tierCommissions[2].toFixed(2)),
+        perEvent,
+      };
+    } catch {
+      return { totalCommission: 0, totalVolume: 0, tier1Count: 0, tier1Commission: 0, tier2Count: 0, tier2Commission: 0, tier3Count: 0, tier3Commission: 0, perEvent: [] };
     }
   },
 };

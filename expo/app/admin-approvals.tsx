@@ -56,6 +56,9 @@ export default function AdminApprovals() {
   const approveAdMutation = api.advertisements.approve.useMutation({
     onSuccess: () => { void refetchAds(); void queryClient.invalidateQueries({ queryKey: ['advertisements'] }); },
   });
+  const rejectAdMutation = api.advertisements.reject.useMutation({
+    onSuccess: () => { void refetchAds(); void queryClient.invalidateQueries({ queryKey: ['advertisements'] }); },
+  });
 
   const handleApproveEvent = useCallback((eventId: string) => {
     Alert.alert('Aprovar Evento', 'Tem certeza?', [
@@ -106,6 +109,16 @@ export default function AdminApprovals() {
       }},
     ]);
   }, [approveAdMutation]);
+
+  const handleRejectAd = useCallback((id: string) => {
+    Alert.alert('Rejeitar Anúncio', 'Tem certeza? Esta ação vai eliminar o anúncio.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Rejeitar', style: 'destructive', onPress: async () => {
+        try { await rejectAdMutation.mutateAsync({ id }); Alert.alert('Rejeitado', 'Anúncio rejeitado.'); }
+        catch { Alert.alert('Erro', 'Falha ao rejeitar.'); }
+      }},
+    ]);
+  }, [rejectAdMutation]);
 
   const handleLogout = () => {
     Alert.alert('Terminar Sessão', 'Tem certeza?', [
@@ -300,6 +313,10 @@ export default function AdminApprovals() {
                   {ad.image && <Image source={{ uri: ad.image }} style={styles.cardImage} />}
                   <Text style={styles.description}>{ad.description || 'Sem descrição'}</Text>
                   <View style={styles.actionButtons}>
+                    <TouchableOpacity style={[styles.actionButton, styles.rejectButton]} onPress={() => handleRejectAd(ad.id)}>
+                      <X size={20} color={COLORS.white} />
+                      <Text style={styles.actionButtonText}>Rejeitar</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity style={[styles.actionButton, styles.approveButton]} onPress={() => handleApproveAd(ad.id)}>
                       <Check size={20} color={COLORS.white} />
                       <Text style={styles.actionButtonText}>Aprovar</Text>

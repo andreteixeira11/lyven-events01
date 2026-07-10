@@ -249,9 +249,30 @@ export default function AdminAds() {
 
   const handleToggleActive = useCallback((ad: any) => {
     if (ad.is_active) {
-      updateMutation.mutate({ id: ad.id, isActive: false });
+      Alert.alert(
+        'Suspender Anúncio',
+        `Tem certeza que deseja suspender "${ad.title}"? O anúncio deixará de ser exibido.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Suspender',
+            style: 'destructive',
+            onPress: () => updateMutation.mutate({ id: ad.id, isActive: false }),
+          },
+        ]
+      );
     } else {
-      approveMutation.mutate({ id: ad.id });
+      Alert.alert(
+        'Reativar Anúncio',
+        `Tem certeza que deseja reativar "${ad.title}"?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Reativar',
+            onPress: () => approveMutation.mutate({ id: ad.id }),
+          },
+        ]
+      );
     }
   }, [updateMutation, approveMutation]);
 
