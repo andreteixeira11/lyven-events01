@@ -69,6 +69,49 @@ export default function ProfileScreen() {
     }
   }, [user, fadeAnim, scaleAnim]);
 
+  // All hooks must be called before any early return (Rules of Hooks)
+  const isAdmin = user?.userType === 'admin';
+  const isPromoter = user?.userType === 'promoter';
+  const userId = user?.id ?? '';
+
+  const { data: profileByUser } = api.promoters.getByUserId.useQuery(
+    { userId },
+    { enabled: !!user?.id && isPromoter }
+  );
+  const resolvedPromoterId = profileByUser?.id ?? null;
+  const { data: promoterEvents = [] } = api.events.list.useQuery(
+    resolvedPromoterId ? { promoterId: resolvedPromoterId } : undefined,
+    { enabled: !!resolvedPromoterId && isPromoter }
+  );
+  const now = new Date();
+  const nextEventRaw = isPromoter ? promoterEvents.find((e: any) => new Date(e.date) >= now) : undefined;
+  const nextEventId = nextEventRaw?.id;
+  const { data: nextEventStats } = api.events.statistics.useQuery(
+    { eventId: nextEventId ?? '' },
+    { enabled: !!nextEventId && isPromoter }
+  );
+  const nextEvent = nextEventRaw
+    ? {
+        id: nextEventRaw.id,
+        title: nextEventRaw.title,
+        date: nextEventRaw.date,
+        image: nextEventRaw.image,
+        venue: typeof nextEventRaw.venue === 'object' && nextEventRaw.venue && 'name' in nextEventRaw.venue
+          ? (nextEventRaw.venue as { name: string }).name
+          : '—',
+        ticketsSold: nextEventStats?.totalTicketsSold ?? 0,
+        totalTickets: Array.isArray((nextEventRaw as any).ticketTypes)
+          ? (nextEventRaw as any).ticketTypes.reduce((s: number, tt: { available?: number }) => s + (tt?.available ?? 0), 0)
+          : 0,
+        revenue: nextEventStats?.totalRevenue ?? 0,
+        views: 0,
+      }
+    : null;
+  const progress =
+    nextEvent && nextEvent.totalTickets > 0
+      ? (nextEvent.ticketsSold / nextEvent.totalTickets) * 100
+      : 0;
+
   if (!user) {
     return (
       <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.primary }]}>
@@ -132,47 +175,6 @@ export default function ProfileScreen() {
       </View>
     );
   }
-
-  const isAdmin = user?.userType === 'admin';
-  const isPromoter = user?.userType === 'promoter';
-
-  const { data: profileByUser } = api.promoters.getByUserId.useQuery(
-    { userId: user?.id ?? '' },
-    { enabled: !!user?.id && isPromoter }
-  );
-  const resolvedPromoterId = profileByUser?.id ?? null;
-  const { data: promoterEvents = [] } = api.events.list.useQuery(
-    resolvedPromoterId ? { promoterId: resolvedPromoterId } : undefined,
-    { enabled: !!resolvedPromoterId && isPromoter }
-  );
-  const now = new Date();
-  const nextEventRaw = isPromoter ? promoterEvents.find((e: any) => new Date(e.date) >= now) : undefined;
-  const nextEventId = nextEventRaw?.id;
-  const { data: nextEventStats } = api.events.statistics.useQuery(
-    { eventId: nextEventId ?? '' },
-    { enabled: !!nextEventId && isPromoter }
-  );
-  const nextEvent = nextEventRaw
-    ? {
-        id: nextEventRaw.id,
-        title: nextEventRaw.title,
-        date: nextEventRaw.date,
-        image: nextEventRaw.image,
-        venue: typeof nextEventRaw.venue === 'object' && nextEventRaw.venue && 'name' in nextEventRaw.venue
-          ? (nextEventRaw.venue as { name: string }).name
-          : '—',
-        ticketsSold: nextEventStats?.totalTicketsSold ?? 0,
-        totalTickets: Array.isArray((nextEventRaw as any).ticketTypes)
-          ? (nextEventRaw as any).ticketTypes.reduce((s: number, tt: { available?: number }) => s + (tt?.available ?? 0), 0)
-          : 0,
-        revenue: nextEventStats?.totalRevenue ?? 0,
-        views: 0,
-      }
-    : null;
-  const progress =
-    nextEvent && nextEvent.totalTickets > 0
-      ? (nextEvent.ticketsSold / nextEvent.totalTickets) * 100
-      : 0;
 
   const handleLogout = () => {
     Alert.alert(
