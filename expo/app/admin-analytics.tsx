@@ -29,31 +29,36 @@ export default function AdminAnalytics() {
   const { logout } = useUser();
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
 
-  const { data: dashboardData, isLoading: dashboardLoading, refetch: refetchDashboard } = api.analytics.dashboard.useQuery();
-  const { isLoading: eventsLoading } = api.analytics.events.useQuery();
+  const { data: dashboardData, isLoading: dashboardLoading, refetch: refetchDashboard } = api.analytics.dashboard.useQuery({ period: selectedPeriod });
+  const { data: analyticsEventsData, isLoading: eventsLoading } = api.analytics.events.useQuery();
   const { data: rawEvents = [] } = api.events.list.useQuery();
 
-  const stats = useMemo(() => dashboardData || { totalUsers: 0, totalEvents: 0, totalTickets: 0, totalRevenue: 0 }, [dashboardData]);
+  const stats = useMemo(() => dashboardData || { totalUsers: 0, totalEvents: 0, totalTickets: 0, totalRevenue: 0, periodTickets: 0, periodRevenue: 0, pendingEvents: 0, pendingPromoters: 0, activeAds: 0 }, [dashboardData]);
 
   const topEvents = useMemo(() => {
-    return (rawEvents || []).slice(0, 5).map((e: any) => ({
-      id: e.id,
-      title: e.title || '',
-      promoterName: e.promoter?.name || 'Desconhecido',
-      date: e.date instanceof Date ? e.date.toISOString() : (e.date || ''),
-      location: e.venue?.city || '',
-      category: e.category || 'other',
-      ticketTypes: e.ticketTypes || [],
-    }));
-  }, [rawEvents]);
+    const analyticsEvents = analyticsEventsData?.events || [];
+    return analyticsEvents
+      .slice(0, 5)
+      .map((e: any) => ({
+        id: e.id,
+        title: e.title || '',
+        promoterName: e.promoter?.name || 'Desconhecido',
+        date: e.date || '',
+        location: e.venue_city || '',
+        category: e.category || 'other',
+        ticketsSold: e.ticketsSold || 0,
+        revenue: e.revenue || 0,
+      }));
+  }, [analyticsEventsData]);
 
   const categoryStats = useMemo(() => {
     const cats: Record<string, number> = {};
-    (rawEvents || []).forEach((e: any) => {
+    (analyticsEventsData?.events || []).forEach((e: any) => {
       const cat = e.category || 'other';
-      cats[cat] = (cats[cat] || 0) + 1;
+      if (!cats[cat]) cats[cat] = 0;
+      cats[cat] += (e.ticketsSold || 0);
     });
-    const total = (rawEvents || []).length || 1;
+    const total = Object.values(cats).reduce((s, v) => s + v, 0) || 1;
     return Object.entries(cats)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 4)
@@ -62,7 +67,7 @@ export default function AdminAnalytics() {
         value: Math.round((count / total) * 100),
         color: [COLORS.primary, COLORS.warning, COLORS.success, COLORS.info][i] || COLORS.gray,
       }));
-  }, [rawEvents]);
+  }, [analyticsEventsData]);
 
   const handleLogout = () => {
     Alert.alert('Terminar Sessão', 'Tem certeza?', [
@@ -140,6 +145,16 @@ export default function AdminAnalytics() {
               </View>
 
               <View style={styles.section}>
+                <Text style={styles.sectionTitle}>No Período Selecionado</Text>
+                <View style={styles.statsGrid}>
+                  <StatCard title={`Receita (${selectedPeriod === 'week' ? 'Semana' : selectedPeriod === 'month' ? 'Mês' : 'Ano'})`} value={formatCurrency(stats.periodRevenue || 0)} icon={DollarSign} color={COLORS.success} />
+                  <StatCard title={`Bilhetes (${selectedPeriod === 'week' ? 'Semana' : selectedPeriod === 'month' ? 'Mês' : 'Ano'})`} value={(stats.periodTickets || 0).toLocaleString()} icon={Target} color={COLORS.primary} />
+                  <StatCard title="Eventos Pendentes" value={stats.pendingEvents || 0} icon={Calendar} color={COLORS.warning} />
+                  <StatCard title="Promotores Pendentes" value={stats.pendingPromoters || 0} icon={Users} color={COLORS.info} />
+                </View>
+              </View>
+
+              <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Métricas Chave</Text>
                 <View style={styles.metricsContainer}>
                   <View style={styles.metricCard}>
@@ -161,7 +176,7 @@ export default function AdminAnalytics() {
 
               {categoryStats.length > 0 && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Top Categorias</Text>
+                  <Text style={styles.sectionTitle}>Top Categorias (por bilhetes vendidos)</Text>
                   <View style={styles.categoryList}>
                     {categoryStats.map((category, index) => (
                       <View key={index} style={styles.categoryItem}>
@@ -181,7 +196,7 @@ export default function AdminAnalytics() {
 
               {topEvents.length > 0 && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Eventos Recentes</Text>
+                  <Text style={styles.sectionTitle}>Top Eventos (por receita)</Text>
                   <View style={styles.eventsContainer}>
                     {topEvents.map((event: any, index: number) => (
                       <View key={event.id} style={styles.eventCard}>
@@ -199,6 +214,14 @@ export default function AdminAnalytics() {
                                 <Text style={styles.metaText}>{event.location}</Text>
                               </View>
                             ) : null}
+                            <View style={styles.metaItem}>
+                              <Target size={12} color={COLORS.textSecondary} />
+                              <Text style={styles.metaText}>{event.ticketsSold} bilhetes</Text>
+                            </View>
+                            <View style={styles.metaItem}>
+                              <DollarSign size={12} color={COLORS.textSecondary} />
+                              <Text style={styles.metaText}>{formatCurrency(event.revenue)}</Text>
+                            </View>
                           </View>
                         </View>
                       </View>

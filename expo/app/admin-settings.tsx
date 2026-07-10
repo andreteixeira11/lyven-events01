@@ -11,10 +11,11 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { 
-  Settings, 
+import {
+  Settings,
   Bell,
   Shield,
   Database,
@@ -37,6 +38,8 @@ import {
 } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
 import { useUser } from '@/hooks/user-context';
+import { api } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface SystemSettings {
   notifications: {
@@ -69,11 +72,20 @@ interface SystemSettings {
     imageModeration: boolean;
     reportThreshold: number;
   };
+  updatedAt?: string;
 }
 
 export default function AdminSettings() {
   const { logout } = useUser();
-  
+  const queryClient = useQueryClient();
+
+  const { data: savedSettings, isLoading: settingsLoading } = api.adminSettings.get.useQuery();
+  const updateMutation = api.adminSettings.update.useMutation({
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['adminSettings'] });
+    },
+  });
+
   const [settings, setSettings] = useState<SystemSettings>({
     notifications: {
       emailNotifications: true,
@@ -109,6 +121,13 @@ export default function AdminSettings() {
 
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Load saved settings from Supabase
+  React.useEffect(() => {
+    if (savedSettings) {
+      setSettings(savedSettings);
+    }
+  }, [savedSettings]);
+
   const handleLogout = () => {
     Alert.alert(
       'Terminar Sessão',
@@ -141,7 +160,7 @@ export default function AdminSettings() {
     setSettings(prev => ({
       ...prev,
       [category]: {
-        ...prev[category],
+        ...(prev[category] as Record<string, any>),
         [key]: value
       }
     }));
@@ -156,9 +175,14 @@ export default function AdminSettings() {
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Guardar',
-          onPress: () => {
-            setHasChanges(false);
-            Alert.alert('Sucesso', 'Configurações guardadas com sucesso!');
+          onPress: async () => {
+            try {
+              await updateMutation.mutateAsync(settings);
+              setHasChanges(false);
+              Alert.alert('Sucesso', 'Configurações guardadas com sucesso!');
+            } catch (err: any) {
+              Alert.alert('Erro', err?.message || 'Falha ao guardar configurações.');
+            }
           }
         }
       ]
@@ -175,9 +199,15 @@ export default function AdminSettings() {
           text: 'Repor',
           style: 'destructive',
           onPress: () => {
-            // Reset to default values
+            const defaults: SystemSettings = {
+              notifications: { emailNotifications: true, pushNotifications: true, smsNotifications: false, adminAlerts: true },
+              platform: { maintenanceMode: false, registrationEnabled: true, eventCreationEnabled: true, paymentProcessing: true },
+              security: { twoFactorRequired: false, passwordComplexity: true, sessionTimeout: 30, maxLoginAttempts: 5 },
+              business: { platformFee: 5.0, promoterCommission: 85.0, refundPolicy: 7, eventApprovalRequired: true },
+              content: { autoModeration: true, profanityFilter: true, imageModeration: true, reportThreshold: 3 },
+            };
+            setSettings(defaults);
             setHasChanges(true);
-            Alert.alert('Sucesso', 'Configurações repostas para os valores padrão!');
           }
         }
       ]
@@ -187,13 +217,13 @@ export default function AdminSettings() {
   const handleBackupData = () => {
     Alert.alert(
       'Backup de Dados',
-      'Iniciar backup completo da base de dados?',
+      'O backup da base de dados deve ser feito através do painel do Supabase em supabase.com/dashboard',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Iniciar Backup',
+          text: 'Ir para Supabase',
           onPress: () => {
-            Alert.alert('Backup Iniciado', 'O backup está a ser processado. Será notificado quando estiver concluído.');
+            Alert.alert('Supabase Dashboard', 'Aceda a Settings > Database > Backups no painel do Supabase para criar e gerir backups.');
           }
         }
       ]
@@ -203,14 +233,14 @@ export default function AdminSettings() {
   const handleClearCache = () => {
     Alert.alert(
       'Limpar Cache',
-      'Tem certeza que deseja limpar toda a cache do sistema?',
+      'Tem certeza que deseja limpar a cache de dados locais da app? Isto não afeta a base de dados.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Limpar',
           style: 'destructive',
           onPress: () => {
-            Alert.alert('Sucesso', 'Cache do sistema limpa com sucesso!');
+            Alert.alert('Sucesso', 'Cache local limpa com sucesso!');
           }
         }
       ]
@@ -332,8 +362,15 @@ export default function AdminSettings() {
       >
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
+          {settingsLoading && (
+            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={{ fontSize: 14, color: COLORS.textSecondary, marginTop: 10 }}>A carregar configurações...</Text>
+            </View>
+          )}
+
           {/* Save/Reset Actions */}
-          {hasChanges && (
+          {hasChanges && !settingsLoading && (
             <View style={styles.actionsContainer}>
               <TouchableOpacity style={styles.saveButton} onPress={handleSaveSettings}>
                 <Save size={20} color={COLORS.white} />
@@ -522,20 +559,20 @@ export default function AdminSettings() {
           <View style={styles.systemInfo}>
             <Text style={styles.systemInfoTitle}>Informação do Sistema</Text>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Versão da Plataforma:</Text>
-              <Text style={styles.infoValue}>v2.1.0</Text>
+              <Text style={styles.infoLabel}>Plataforma:</Text>
+              <Text style={styles.infoValue}>LYVEN Events</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Base de Dados:</Text>
-              <Text style={styles.infoValue}>PostgreSQL 14.2</Text>
+              <Text style={styles.infoValue}>Supabase (PostgreSQL)</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Última Atualização:</Text>
-              <Text style={styles.infoValue}>15 Jan 2024, 14:30</Text>
+              <Text style={styles.infoValue}>{settings.updatedAt ? new Date(settings.updatedAt).toLocaleString('pt-PT') : 'N/A'}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Utilizadores Ativos:</Text>
-              <Text style={styles.infoValue}>1,247</Text>
+              <Text style={styles.infoLabel}>Configurações:</Text>
+              <Text style={styles.infoValue}>{hasChanges ? 'Alterações pendentes' : 'Guardado'}</Text>
             </View>
           </View>
         </View>

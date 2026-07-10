@@ -20,6 +20,7 @@ import {
   recommendationsApi,
   webhooksApi,
   seatsApi,
+  adminSettingsApi,
 } from './supabase-api';
 import React from 'react';
 
@@ -207,6 +208,10 @@ export const api = {
     revenue: createQueryHook(['analytics', 'revenue'], analyticsApi.revenue),
     users: createQueryHook(['analytics', 'users'], analyticsApi.users),
   },
+  adminSettings: {
+    get: createQueryHook(['adminSettings', 'get'], adminSettingsApi.get),
+    update: createMutationHook(adminSettingsApi.update),
+  },
   useUtils: () => {
     const queryClient = useQueryClient();
     return {
@@ -363,6 +368,10 @@ export const apiClient = {
     promoters: { query: analyticsApi.promoters },
     revenue: { query: analyticsApi.revenue },
     users: { query: analyticsApi.users },
+  },
+  adminSettings: {
+    get: { query: adminSettingsApi.get },
+    update: { mutate: adminSettingsApi.update },
   },
   stripe: {
     getConfig: { query: stripeApi.getConfig },

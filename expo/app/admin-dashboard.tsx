@@ -57,6 +57,7 @@ export default function AdminDashboard() {
   const { data: pendingEventsData = [], isLoading: pendingEventsLoading, refetch: refetchPendingEvents } = api.events.listPending.useQuery();
   const { data: pendingPromotersData, isLoading: pendingPromotersLoading, refetch: refetchPendingPromoters } = api.promoters.listPending.useQuery();
   const { data: dashboardData, isLoading: dashboardLoading } = api.analytics.dashboard.useQuery();
+  const { data: analyticsEvents } = api.analytics.events.useQuery();
 
   const approveMutation = api.events.approve.useMutation({
     onSuccess: () => {
@@ -87,26 +88,38 @@ export default function AdminDashboard() {
     },
   });
 
-  const users = useMemo(() => (rawUsers || []).map((u: any) => ({
-    id: u.id,
-    name: u.name || 'Sem nome',
-    email: u.email || '',
-    userType: u.user_type || 'normal',
-    totalSpent: 0,
-    lastAccess: u.created_at || new Date().toISOString(),
-    isActive: true,
-  })), [rawUsers]);
+  const users = useMemo(() => {
+    const userStatsMap: Record<string, { totalSpent: number; ticketsBought: number }> = {};
+    (analyticsEvents?.events || []).forEach((e: any) => {
+      // We don't have per-user ticket data from analytics.events, so compute from tickets if available
+    });
+    return (rawUsers || []).map((u: any) => ({
+      id: u.id,
+      name: u.name || 'Sem nome',
+      email: u.email || '',
+      userType: u.user_type || 'normal',
+      totalSpent: userStatsMap[u.id]?.totalSpent || 0,
+      lastAccess: u.created_at || new Date().toISOString(),
+      isActive: true,
+    }));
+  }, [rawUsers, analyticsEvents]);
 
-  const events = useMemo(() => (rawEvents || []).map((e: any) => ({
-    id: e.id,
-    title: e.title || 'Sem título',
-    imageUrl: e.image || '',
-    ticketsSold: 0,
-    revenue: 0,
-    date: e.date instanceof Date ? e.date.toISOString() : (e.date || ''),
-    status: 'active' as const,
-    promoterName: e.promoter?.name || 'Desconhecido',
-  })), [rawEvents]);
+  const events = useMemo(() => {
+    const statsMap: Record<string, { ticketsSold: number; revenue: number }> = {};
+    (analyticsEvents?.events || []).forEach((e: any) => {
+      statsMap[e.id] = { ticketsSold: e.ticketsSold || 0, revenue: e.revenue || 0 };
+    });
+    return (rawEvents || []).map((e: any) => ({
+      id: e.id,
+      title: e.title || 'Sem título',
+      imageUrl: e.image || '',
+      ticketsSold: statsMap[e.id]?.ticketsSold || 0,
+      revenue: statsMap[e.id]?.revenue || 0,
+      date: e.date instanceof Date ? e.date.toISOString() : (e.date || ''),
+      status: (e as any).status || 'active',
+      promoterName: e.promoter?.name || 'Desconhecido',
+    }));
+  }, [rawEvents, analyticsEvents]);
 
   const pendingPromoters = useMemo(() => pendingPromotersData?.promoters || [], [pendingPromotersData]);
 
@@ -236,7 +249,8 @@ export default function AdminDashboard() {
     void refetchEvents();
     void refetchPendingEvents();
     void refetchPendingPromoters();
-  }, [refetchUsers, refetchEvents, refetchPendingEvents, refetchPendingPromoters]);
+    void queryClient.invalidateQueries({ queryKey: ['analytics'] });
+  }, [refetchUsers, refetchEvents, refetchPendingEvents, refetchPendingPromoters, queryClient]);
 
   const ProfileButton = () => (
     <TouchableOpacity style={styles.profileButton} onPress={handleLogout}>

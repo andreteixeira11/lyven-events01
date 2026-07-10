@@ -73,6 +73,7 @@ export default function AdminEvents() {
 
   const { data: rawEvents = [], isLoading: eventsLoading, refetch: refetchEvents } = api.events.list.useQuery();
   const { data: promotersList = [], isLoading: promotersLoading } = api.promoters.list.useQuery();
+  const { data: analyticsEventsData } = api.analytics.events.useQuery();
 
   const approveMutation = api.events.approve.useMutation({
     onSuccess: () => {
@@ -148,7 +149,12 @@ export default function AdminEvents() {
     setTicketTypes(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
   };
 
-  const events = useMemo(() => (rawEvents || []).map((e: any) => {
+  const events = useMemo(() => {
+    const statsMap: Record<string, { ticketsSold: number; revenue: number }> = {};
+    (analyticsEventsData?.events || []).forEach((e: any) => {
+      statsMap[e.id] = { ticketsSold: e.ticketsSold || 0, revenue: e.revenue || 0 };
+    });
+    return (rawEvents || []).map((e: any) => {
     const dateVal = e.date instanceof Date ? e.date : new Date(e.date);
     return {
       id: e.id,
@@ -164,12 +170,13 @@ export default function AdminEvents() {
       imageUrl: e.image || '',
       price: (e.ticketTypes && e.ticketTypes[0]?.price) || 0,
       totalTickets: (e.ticketTypes || []).reduce((sum: number, t: any) => sum + (t.available || 0), 0),
-      soldTickets: 0,
+      soldTickets: statsMap[e.id]?.ticketsSold || 0,
       status: e.isSoldOut ? 'completed' : (e as any).status || 'published',
       isVerified: e.promoter?.verified || false,
-      revenue: 0,
+      revenue: statsMap[e.id]?.revenue || 0,
     };
-  }), [rawEvents]);
+    });
+  }, [rawEvents, analyticsEventsData]);
 
   const filteredEvents = useMemo(() => events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -871,7 +878,7 @@ export default function AdminEvents() {
                       <Eye size={20} color={COLORS.info} />
                     </View>
                     <Text style={styles.detailStatValue}>{`€${selectedEvent.price}`}</Text>
-                    <Text style={styles.detailStatLabel}>Pre\u00e7o Base</Text>
+                    <Text style={styles.detailStatLabel}>Preço Base</Text>
                   </View>
                 </View>
 
@@ -881,7 +888,7 @@ export default function AdminEvents() {
                     <Calendar size={18} color={COLORS.primary} />
                     <View style={styles.detailInfoContent}>
                       <Text style={styles.detailInfoLabel}>Data</Text>
-                      <Text style={styles.detailInfoValue}>{formatDate(selectedEvent.date)} \u00e0s {selectedEvent.time || '00:00'}</Text>
+                      <Text style={styles.detailInfoValue}>{formatDate(selectedEvent.date)} às {selectedEvent.time || '00:00'}</Text>
                     </View>
                   </View>
                   <View style={styles.detailInfoRow}>

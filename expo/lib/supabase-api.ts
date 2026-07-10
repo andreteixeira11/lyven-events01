@@ -911,6 +911,8 @@ export const usersApi = {
       if (rest.preferencesPriceMin !== undefined) updates.preferences_price_min = rest.preferencesPriceMin;
       if (rest.preferencesPriceMax !== undefined) updates.preferences_price_max = rest.preferencesPriceMax;
       if (rest.preferencesEventTypes !== undefined) updates.preferences_event_types = typeof rest.preferencesEventTypes === 'string' ? rest.preferencesEventTypes : JSON.stringify(rest.preferencesEventTypes);
+      if (rest.userType !== undefined) updates.user_type = rest.userType;
+      if (rest.isOnboardingComplete !== undefined) updates.is_onboarding_complete = rest.isOnboardingComplete;
 
       if (Object.keys(updates).length === 0) throw new Error('No fields to update');
 
@@ -2256,29 +2258,73 @@ export const recommendationsApi = {
 };
 
 export const analyticsApi = {
-  dashboard: async (): Promise<any> => {
+  dashboard: async (input?: { period?: 'week' | 'month' | 'year' }): Promise<any> => {
     try {
+      const period = input?.period || 'month';
+      const now = new Date();
+      let startDate = new Date(0);
+      if (period === 'week') startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      else if (period === 'month') startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      else if (period === 'year') startDate = new Date(now.getFullYear(), 0, 1);
+      const startDateIso = startDate.toISOString();
+
       const { count: totalUsers } = await supabase.from('users').select('*', { count: 'exact', head: true });
       const { count: totalEvents } = await supabase.from('events').select('*', { count: 'exact', head: true });
+      const { count: pendingEvents } = await supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+      const { count: pendingPromoters } = await supabase.from('promoter_profiles').select('*', { count: 'exact', head: true }).eq('is_approved', false);
+
       const { count: totalTickets } = await supabase.from('tickets').select('*', { count: 'exact', head: true });
+      const { count: periodTickets } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).gte('purchase_date', startDateIso);
+
       const { data: ticketRevenue } = await supabase.from('tickets').select('price, quantity');
       const totalRevenue = (ticketRevenue || []).reduce((sum: number, t: any) => sum + ((t.price || 0) * (t.quantity || 0)), 0);
+
+      const { data: periodTicketRevenue } = await supabase.from('tickets').select('price, quantity').gte('purchase_date', startDateIso);
+      const periodRevenue = (periodTicketRevenue || []).reduce((sum: number, t: any) => sum + ((t.price || 0) * (t.quantity || 0)), 0);
+
+      const { count: activeAds } = await supabase.from('advertisements').select('*', { count: 'exact', head: true }).eq('is_active', true);
 
       return {
         totalUsers: totalUsers || 0,
         totalEvents: totalEvents || 0,
         totalTickets: totalTickets || 0,
         totalRevenue,
+        pendingEvents: pendingEvents || 0,
+        pendingPromoters: pendingPromoters || 0,
+        activeAds: activeAds || 0,
+        periodTickets: periodTickets || 0,
+        periodRevenue,
+        period,
       };
     } catch {
-      return { totalUsers: 0, totalEvents: 0, totalTickets: 0, totalRevenue: 0 };
+      return { totalUsers: 0, totalEvents: 0, totalTickets: 0, totalRevenue: 0, pendingEvents: 0, pendingPromoters: 0, activeAds: 0, periodTickets: 0, periodRevenue: 0, period: input?.period || 'month' };
     }
   },
 
   events: async (): Promise<any> => {
     try {
-      const { data } = await supabase.from('events').select('id, title, category, status, date, is_featured').order('date', { ascending: false }).limit(50);
-      return { events: data || [] };
+      const { data: rawEvents } = await supabase.from('events').select('id, title, category, status, date, is_featured, promoter_id, venue_name, venue_city').order('date', { ascending: false }).limit(50);
+      if (!rawEvents || rawEvents.length === 0) return { events: [] };
+
+      const eventIds = rawEvents.map((e: any) => e.id);
+      const { data: tickets } = await supabase.from('tickets').select('event_id, quantity, price').in('event_id', eventIds);
+
+      const statsMap: Record<string, { ticketsSold: number; revenue: number }> = {};
+      (tickets || []).forEach((t: any) => {
+        if (!statsMap[t.event_id]) statsMap[t.event_id] = { ticketsSold: 0, revenue: 0 };
+        statsMap[t.event_id].ticketsSold += t.quantity || 0;
+        statsMap[t.event_id].revenue += (t.price || 0) * (t.quantity || 0);
+      });
+
+      const events = rawEvents.map((e: any) => ({
+        ...e,
+        ticketsSold: statsMap[e.id]?.ticketsSold || 0,
+        revenue: statsMap[e.id]?.revenue || 0,
+      }));
+
+      events.sort((a: any, b: any) => b.revenue - a.revenue);
+
+      return { events };
     } catch {
       return { events: [] };
     }
@@ -2293,9 +2339,19 @@ export const analyticsApi = {
     }
   },
 
-  revenue: async (): Promise<any> => {
+  revenue: async (input?: { period?: 'week' | 'month' | 'year' }): Promise<any> => {
     try {
-      const { data } = await supabase.from('tickets').select('price, quantity, purchase_date').order('purchase_date', { ascending: false }).limit(100);
+      const period = input?.period || 'month';
+      const now = new Date();
+      let startDate = new Date(0);
+      if (period === 'week') startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      else if (period === 'month') startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      else if (period === 'year') startDate = new Date(now.getFullYear(), 0, 1);
+
+      const { data } = await supabase.from('tickets')
+        .select('price, quantity, purchase_date')
+        .gte('purchase_date', startDate.toISOString())
+        .order('purchase_date', { ascending: false });
       return { revenue: data || [] };
     } catch {
       return { revenue: [] };
@@ -2308,6 +2364,115 @@ export const analyticsApi = {
       return { users: data || [] };
     } catch {
       return { users: [] };
+    }
+  },
+};
+
+export const adminSettingsApi = {
+  get: async (): Promise<any> => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('*')
+        .eq('id', 'global')
+        .maybeSingle();
+      if (error) {
+        console.error('[adminSettingsApi.get] error:', error.message);
+        return null;
+      }
+      if (data) {
+        return {
+          notifications: {
+            emailNotifications: data.email_notifications ?? true,
+            pushNotifications: data.push_notifications ?? true,
+            smsNotifications: data.sms_notifications ?? false,
+            adminAlerts: data.admin_alerts ?? true,
+          },
+          platform: {
+            maintenanceMode: data.maintenance_mode ?? false,
+            registrationEnabled: data.registration_enabled ?? true,
+            eventCreationEnabled: data.event_creation_enabled ?? true,
+            paymentProcessing: data.payment_processing ?? true,
+          },
+          security: {
+            twoFactorRequired: data.two_factor_required ?? false,
+            passwordComplexity: data.password_complexity ?? true,
+            sessionTimeout: data.session_timeout ?? 30,
+            maxLoginAttempts: data.max_login_attempts ?? 5,
+          },
+          business: {
+            platformFee: data.platform_fee ?? 5.0,
+            promoterCommission: data.promoter_commission ?? 85.0,
+            refundPolicy: data.refund_policy_days ?? 7,
+            eventApprovalRequired: data.event_approval_required ?? true,
+          },
+          content: {
+            autoModeration: data.auto_moderation ?? true,
+            profanityFilter: data.profanity_filter ?? true,
+            imageModeration: data.image_moderation ?? true,
+            reportThreshold: data.report_threshold ?? 3,
+          },
+          updatedAt: data.updated_at,
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error('[adminSettingsApi.get] error:', err);
+      return null;
+    }
+  },
+
+  update: async (input: any): Promise<{ success: boolean }> => {
+    try {
+      const updates: Record<string, any> = {
+        id: 'global',
+        updated_at: new Date().toISOString(),
+      };
+      if (input.notifications) {
+        const n = input.notifications;
+        if (n.emailNotifications !== undefined) updates.email_notifications = n.emailNotifications;
+        if (n.pushNotifications !== undefined) updates.push_notifications = n.pushNotifications;
+        if (n.smsNotifications !== undefined) updates.sms_notifications = n.smsNotifications;
+        if (n.adminAlerts !== undefined) updates.admin_alerts = n.adminAlerts;
+      }
+      if (input.platform) {
+        const p = input.platform;
+        if (p.maintenanceMode !== undefined) updates.maintenance_mode = p.maintenanceMode;
+        if (p.registrationEnabled !== undefined) updates.registration_enabled = p.registrationEnabled;
+        if (p.eventCreationEnabled !== undefined) updates.event_creation_enabled = p.eventCreationEnabled;
+        if (p.paymentProcessing !== undefined) updates.payment_processing = p.paymentProcessing;
+      }
+      if (input.security) {
+        const s = input.security;
+        if (s.twoFactorRequired !== undefined) updates.two_factor_required = s.twoFactorRequired;
+        if (s.passwordComplexity !== undefined) updates.password_complexity = s.passwordComplexity;
+        if (s.sessionTimeout !== undefined) updates.session_timeout = s.sessionTimeout;
+        if (s.maxLoginAttempts !== undefined) updates.max_login_attempts = s.maxLoginAttempts;
+      }
+      if (input.business) {
+        const b = input.business;
+        if (b.platformFee !== undefined) updates.platform_fee = b.platformFee;
+        if (b.promoterCommission !== undefined) updates.promoter_commission = b.promoterCommission;
+        if (b.refundPolicy !== undefined) updates.refund_policy_days = b.refundPolicy;
+        if (b.eventApprovalRequired !== undefined) updates.event_approval_required = b.eventApprovalRequired;
+      }
+      if (input.content) {
+        const c = input.content;
+        if (c.autoModeration !== undefined) updates.auto_moderation = c.autoModeration;
+        if (c.profanityFilter !== undefined) updates.profanity_filter = c.profanityFilter;
+        if (c.imageModeration !== undefined) updates.image_moderation = c.imageModeration;
+        if (c.reportThreshold !== undefined) updates.report_threshold = c.reportThreshold;
+      }
+
+      const { error } = await supabase.from('admin_settings').upsert(updates);
+      if (error) {
+        console.error('[adminSettingsApi.update] error:', error.message);
+        throw error;
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('[adminSettingsApi.update] error:', err);
+      throw err;
     }
   },
 };
