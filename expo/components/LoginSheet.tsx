@@ -284,7 +284,11 @@ export default function LoginSheet({ visible, onClose, initialMode = 'login' }: 
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        style={styles.overlay}
+      >
         <TouchableWithoutFeedback onPress={handleClose}>
           <Animated.View
             style={[
@@ -317,15 +321,11 @@ export default function LoginSheet({ visible, onClose, initialMode = 'login' }: 
             </TouchableOpacity>
           </View>
 
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.keyboardView}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            <ScrollView
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
               <View style={styles.userTypeContainer}>
                 <TouchableOpacity
                   style={[
@@ -523,9 +523,8 @@ export default function LoginSheet({ visible, onClose, initialMode = 'login' }: 
                 </View>
               )}
             </ScrollView>
-          </KeyboardAvoidingView>
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -549,6 +548,11 @@ const styles = StyleSheet.create({
     minHeight: '60%',
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
   },
+  scrollContent: {
+    padding: SPACING.xl,
+    paddingTop: SPACING.sm,
+    paddingBottom: 120,
+  },
   handle: {
     width: 40,
     height: 4,
@@ -570,13 +574,6 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: SPACING.xl,
-    paddingTop: SPACING.sm,
   },
   userTypeContainer: {
     flexDirection: 'row',
