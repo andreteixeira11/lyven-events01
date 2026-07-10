@@ -23,7 +23,7 @@
         "NSLocationWhenInUseUsageDescription": "LYVEN uses your location to show events near you and calculate distances to venues. For example, we use your location to display nearby concerts on the Explore and Search screens.",
         "NSCalendarsUsageDescription": "Allow $(PRODUCT_NAME) to access your calendar",
         "NSRemindersUsageDescription": "Allow $(PRODUCT_NAME) to access your reminders",
-        "NSCameraUsageDescription": "LYVEN needs camera access so you can take a photo for your profile picture. For example, you can snap a selfie and set it as your avatar.",
+        "NSCameraUsageDescription": "LYVEN needs camera access to let you take a photo for your profile picture and to scan QR codes for ticket validation at event entry. For example, you can snap a selfie to set as your avatar, or promoters can scan attendee QR codes to check them into an event.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone",
         "NSFaceIDUsageDescription": "Allow $(PRODUCT_NAME) to use Face ID.",
         "NSPhotoLibraryUsageDescription": "LYVEN needs photo library access so you can choose a photo for your profile picture. For example, you can select a photo from your gallery and set it as your avatar.",
@@ -84,7 +84,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "cameraPermission": "LYVEN needs camera access to let you take a photo for your profile picture and to scan QR codes for ticket validation at event entry.",
           "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
           "recordAudioAndroid": true
         }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity, ScrollView, Animated, Easing } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Lock, Ticket, Heart, Sparkles, LogIn, UserPlus, CalendarHeart } from 'lucide-react-native';
+import { Lock, LogIn, UserPlus } from 'lucide-react-native';
 import { useUser } from '@/hooks/user-context';
 import { useTheme } from '@/hooks/theme-context';
 import { router } from 'expo-router';
@@ -52,15 +52,8 @@ export default function AuthGuard({ children, title, message }: AuthGuardProps) 
   }
 
   if (!user) {
-    const features = [
-      { icon: Ticket, title: 'Os Meus Bilhetes', desc: 'Aceda aos seus bilhetes e códigos QR' },
-      { icon: Heart, title: 'Favoritos', desc: 'Guarde os seus eventos preferidos' },
-      { icon: CalendarHeart, title: 'Calendário', desc: 'Acompanhe eventos que vai comparecer' },
-      { icon: Sparkles, title: 'Recomendações', desc: 'Personalizadas segundo os seus gostos' },
-    ];
-
     return (
-      <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}>
+      <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.primary }]}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces={false}>
           {/* Hero card */}
           <Animated.View
@@ -80,32 +73,8 @@ export default function AuthGuard({ children, title, message }: AuthGuardProps) 
             </Text>
           </Animated.View>
 
-          {/* Feature list */}
-          <View style={styles.guestFeatures}>
-            {features.map((f) => (
-              <Animated.View
-                key={f.title}
-                style={[
-                  styles.guestFeatureCard,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                  { opacity: fadeAnim },
-                ]}
-              >
-                <View style={[styles.guestFeatureIcon, { backgroundColor: colors.primary + '15' }]}>
-                  <f.icon size={22} color={colors.primary} />
-                </View>
-                <View style={styles.guestFeatureText}>
-                  <Text style={[styles.guestFeatureTitle, { color: colors.text }]}>{f.title}</Text>
-                  <Text style={[styles.guestFeatureDesc, { color: colors.textSecondary }]}>
-                    {f.desc}
-                  </Text>
-                </View>
-              </Animated.View>
-            ))}
-          </View>
-
           {/* CTA buttons */}
-          <View style={styles.guestCTA}>
+          <View style={[styles.guestCTA, { backgroundColor: colors.background }]}>
             <TouchableOpacity
               style={[styles.guestLoginButton, { backgroundColor: colors.primary }]}
               onPress={() => {
@@ -131,14 +100,15 @@ export default function AuthGuard({ children, title, message }: AuthGuardProps) 
           </View>
 
           {/* Browse without account */}
-          <TouchableOpacity
-            style={styles.guestBrowseLink}
-            onPress={() => router.replace('/(tabs)')}
-          >
-            <Text style={[styles.guestBrowseText, { color: colors.textSecondary }]}>
-              Continuar a explorar sem conta
-            </Text>
-          </TouchableOpacity>
+          <View style={[styles.guestBrowseLink, { backgroundColor: colors.background }]}>
+            <TouchableOpacity
+              onPress={() => router.replace('/(tabs)')}
+            >
+              <Text style={[styles.guestBrowseText, { color: colors.textSecondary }]}>
+                Continuar a explorar sem conta
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
 
         <LoginSheet
@@ -203,41 +173,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     paddingHorizontal: 12,
   },
-  guestFeatures: {
-    padding: SPACING.lg,
-    paddingTop: SPACING.xl,
-    gap: SPACING.md,
-  },
-  guestFeatureCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    borderWidth: 1,
-    gap: SPACING.md,
-  },
-  guestFeatureIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  guestFeatureText: {
-    flex: 1,
-  },
-  guestFeatureTitle: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    marginBottom: 2,
-  },
-  guestFeatureDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
   guestCTA: {
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.sm,
+    paddingTop: SPACING.xl,
+    paddingBottom: SPACING.lg,
     gap: SPACING.md,
   },
   guestLoginButton: {
@@ -266,7 +205,9 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
   },
   guestBrowseLink: {
+    flexGrow: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: SPACING.lg,
     paddingBottom: SPACING.xxxl,
   },
