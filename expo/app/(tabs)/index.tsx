@@ -350,10 +350,10 @@ function NormalUserExploreContent() {
               <View style={[styles.emptyState, { backgroundColor: colors.card }]}>
                 <Calendar size={40} color={colors.textSecondary} />
                 <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-                  Nenhum evento pr\u00f3ximo
+                  Nenhum evento próximo
                 </Text>
                 <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
-                  Novos eventos ser\u00e3o adicionados em breve
+                  Novos eventos serão adicionados em breve
                 </Text>
               </View>
             )}

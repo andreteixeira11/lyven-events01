@@ -868,7 +868,7 @@ export default function AdminEvents() {
                 </View>
 
                 <View style={styles.detailInfoSection}>
-                  <Text style={styles.detailSectionTitle}>Informa\u00e7\u00f5es</Text>
+                  <Text style={styles.detailSectionTitle}>Informações</Text>
                   <View style={styles.detailInfoRow}>
                     <Calendar size={18} color={COLORS.primary} />
                     <View style={styles.detailInfoContent}>
