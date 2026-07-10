@@ -74,37 +74,37 @@ export default function AuthGuard({ children, title, message }: AuthGuardProps) 
           </Animated.View>
 
           {/* CTA buttons */}
-          <View style={[styles.guestCTA, { backgroundColor: colors.background }]}>
+          <View style={styles.guestCTA}>
             <TouchableOpacity
-              style={[styles.guestLoginButton, { backgroundColor: colors.primary }]}
+              style={[styles.guestLoginButton, { backgroundColor: colors.white }]}
               onPress={() => {
                 setLoginSheetMode('login');
                 setLoginSheetVisible(true);
               }}
               activeOpacity={0.85}
             >
-              <LogIn size={20} color={colors.white} />
-              <Text style={[styles.guestLoginText, { color: colors.white }]}>Entrar</Text>
+              <LogIn size={20} color={colors.primary} />
+              <Text style={[styles.guestLoginText, { color: colors.primary }]}>Entrar</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.guestRegisterButton, { borderColor: colors.primary }]}
+              style={[styles.guestRegisterButton, { borderColor: colors.white }]}
               onPress={() => {
                 setLoginSheetMode('register');
                 setLoginSheetVisible(true);
               }}
               activeOpacity={0.85}
             >
-              <UserPlus size={20} color={colors.primary} />
-              <Text style={[styles.guestRegisterText, { color: colors.primary }]}>Criar Conta</Text>
+              <UserPlus size={20} color={colors.white} />
+              <Text style={[styles.guestRegisterText, { color: colors.white }]}>Criar Conta</Text>
             </TouchableOpacity>
           </View>
 
           {/* Browse without account */}
-          <View style={[styles.guestBrowseLink, { backgroundColor: colors.background }]}>
+          <View style={styles.guestBrowseLink}>
             <TouchableOpacity
               onPress={() => router.replace('/(tabs)')}
             >
-              <Text style={[styles.guestBrowseText, { color: colors.textSecondary }]}>
+              <Text style={[styles.guestBrowseText, { color: 'rgba(255,255,255,0.8)' }]}>
                 Continuar a explorar sem conta
               </Text>
             </TouchableOpacity>
@@ -148,8 +148,6 @@ const styles = StyleSheet.create({
     padding: 28,
     paddingTop: 36,
     paddingBottom: 32,
-    borderBottomLeftRadius: RADIUS.xxl,
-    borderBottomRightRadius: RADIUS.xxl,
   },
   guestAvatar: {
     width: 72,
