@@ -696,7 +696,6 @@ export default function CreateEvent() {
               )}
             </View>
           </ScrollView>
-          </KeyboardAvoidingView>
 
           <View style={styles.navigationContainer}>
             <TouchableOpacity 
@@ -720,6 +719,7 @@ export default function CreateEvent() {
               {currentStep < totalSteps - 1 && <ChevronRight size={20} color="#fff" />}
             </TouchableOpacity>
           </View>
+          </KeyboardAvoidingView>
         </View>
       )}
 

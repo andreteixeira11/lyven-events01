@@ -11,6 +11,7 @@ import { useUser } from "@/hooks/user-context";
 import { useTheme } from "@/hooks/theme-context";
 import { RADIUS, SHADOWS, SPACING } from "@/constants/colors";
 import { useQueryClient } from '@tanstack/react-query';
+import BackButton from '@/components/BackButton';
 
 type PaymentMethod = 'card' | 'mbway' | 'multibanco';
 type CheckoutStep = 'review' | 'payment' | 'confirm';
@@ -750,12 +751,7 @@ export default function CheckoutScreen() {
           headerTintColor: colors.white,
           headerTitleStyle: { fontWeight: '600' as const },
           headerLeft: () => (
-            <TouchableOpacity 
-              onPress={() => currentStep === 'review' ? router.back() : handlePreviousStep()}
-              style={styles.headerBack}
-            >
-              <ArrowLeft size={24} color={colors.white} />
-            </TouchableOpacity>
+            <BackButton onPress={() => currentStep === 'review' ? router.back() : handlePreviousStep()} color={colors.white} backgroundColor="{rgba(0,0,0,0.2)}" />
           ),
         }} 
       />

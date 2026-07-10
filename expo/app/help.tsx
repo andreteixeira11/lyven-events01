@@ -30,6 +30,7 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/theme-context';
 import { RADIUS, SHADOWS, SPACING } from '@/constants/colors';
+import BackButton from '@/components/BackButton';
 
 interface FAQItem {
   id: string;
@@ -155,9 +156,7 @@ export default function Help() {
           headerTintColor: colors.white,
           headerTitleStyle: { fontWeight: '600' as const },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <ArrowLeft size={24} color={colors.white} />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color={colors.white} backgroundColor="{rgba(0,0,0,0.2)}" />
           ),
         }} 
       />

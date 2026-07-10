@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Lock, Eye, EyeOff, Shield, Smartphone } from 'lucide-react-native';
+import BackButton from '@/components/BackButton';
 import { COLORS } from '@/constants/colors';
 
 export default function Security() {
@@ -117,9 +118,7 @@ export default function Security() {
           headerTintColor: COLORS.headerText,
           headerTitleStyle: { fontWeight: 'bold' as const },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <ArrowLeft size={24} color={COLORS.headerText} />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color={COLORS.headerText} backgroundColor="{rgba(0,0,0,0.2)}" />
           ),
         }}
       />

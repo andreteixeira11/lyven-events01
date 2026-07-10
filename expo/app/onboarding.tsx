@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -112,7 +114,11 @@ export default function OnboardingScreen() {
           </Text>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.stepHeader}>
             <Text style={styles.stepTitle}>{step.title}</Text>
             <Text style={styles.stepDescription}>{step.description}</Text>
@@ -145,6 +151,7 @@ export default function OnboardingScreen() {
             {!isLastStep && <ChevronRight size={20} color={COLORS.white} />}
           </TouchableOpacity>
         </View>
+        </KeyboardAvoidingView>
       </View>
     </SafeAreaView>
   );

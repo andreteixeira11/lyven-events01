@@ -30,6 +30,7 @@ import {
 } from 'lucide-react-native';
 import { useUser } from '@/hooks/user-context';
 import { COLORS } from '@/constants/colors';
+import BackButton from '@/components/BackButton';
 
 type AdType = 'banner' | 'card' | 'sponsored_event';
 type AdDuration = '7' | '14' | '30';
@@ -628,9 +629,7 @@ export default function AdPurchase() {
           headerStyle: { backgroundColor: COLORS.background },
           headerTintColor: COLORS.text,
           headerLeft: () => (
-            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <ArrowLeft size={24} color={COLORS.text} />
-            </TouchableOpacity>
+            <BackButton onPress={handleBack} color={COLORS.text} backgroundColor="{rgba(0,0,0,0.05)}" />
           ),
         }} 
       />

@@ -29,6 +29,7 @@ import { useUser } from '@/hooks/user-context';
 import { useTheme } from '@/hooks/theme-context';
 import { api } from '@/lib/api';
 import { scale as responsiveScale } from '@/utils/responsive-styles';
+import BackButton from '@/components/BackButton';
 
 type PaymentMethodType = 'bank_transfer' | 'mbway' | 'paypal' | 'stripe';
 
@@ -362,10 +363,8 @@ export default function PaymentMethods() {
             headerTintColor: colors.white,
             headerTitleStyle: { fontWeight: 'bold' as const },
             headerLeft: () => (
-              <TouchableOpacity onPress={() => router.back()}>
-                <ArrowLeft size={responsiveScale(24)} color={colors.white} />
-              </TouchableOpacity>
-            ),
+            <BackButton onPress={() => router.back()} color={colors.white} backgroundColor="{rgba(0,0,0,0.2)}" />
+          ),
           }}
         />
         <View style={styles.loadingContainer}>
@@ -387,9 +386,7 @@ export default function PaymentMethods() {
           headerTintColor: colors.white,
           headerTitleStyle: { fontWeight: 'bold' as const },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <ArrowLeft size={responsiveScale(24)} color={colors.white} />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color={colors.white} />
           ),
         }}
       />

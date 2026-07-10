@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Mail, Bell, Calendar, TrendingUp, Users, Ticket, Heart } from 'lucide-react-native';
+import BackButton from '@/components/BackButton';
 import { COLORS } from '@/constants/colors';
 import { useUser } from '@/hooks/user-context';
 import { supabase } from '@/lib/supabase';
@@ -216,9 +217,7 @@ export default function EmailPreferences() {
           headerTintColor: COLORS.headerText,
           headerTitleStyle: { fontWeight: 'bold' as const },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <ArrowLeft size={24} color={COLORS.headerText} />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color={COLORS.headerText} backgroundColor="{rgba(0,0,0,0.2)}" />
           ),
         }}
       />

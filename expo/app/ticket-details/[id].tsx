@@ -39,6 +39,7 @@ import { api } from '@/lib/api';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
 import QRCode from '@/components/QRCode';
+import BackButton from '@/components/BackButton';
 
 const { width } = Dimensions.get('window');
 const QR_SIZE = width * 0.7;
@@ -343,9 +344,7 @@ export default function TicketDetailsScreen() {
       
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.background, paddingTop: insets.top + 8 }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-            <ArrowLeft size={24} color={colors.text} />
-          </TouchableOpacity>
+          <BackButton onPress={() => router.back()} color={colors.text} backgroundColor="rgba(0,0,0,0.05)" />
           <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
             <Share2 size={24} color={colors.text} />
           </TouchableOpacity>

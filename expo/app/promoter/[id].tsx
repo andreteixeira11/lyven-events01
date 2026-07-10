@@ -13,6 +13,7 @@ import { ArrowLeft, MapPin, Calendar, Check } from 'lucide-react-native';
 import { useTheme } from '@/hooks/theme-context';
 import { useUser } from '@/hooks/user-context';
 import { api } from '@/lib/api';
+import BackButton from '@/components/BackButton';
 
 export default function PromoterScreen() {
   const { id } = useLocalSearchParams();
@@ -121,12 +122,7 @@ export default function PromoterScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.primary }]}>
-          <TouchableOpacity 
-            onPress={() => router.back()} 
-            style={styles.backButton}
-          >
-            <ArrowLeft size={24} color="#fff" style={{ marginLeft: 2 }} />
-          </TouchableOpacity>
+          <BackButton onPress={() => router.back()} color="#fff" />
         </View>
 
         <View style={[styles.promoterHeader, { backgroundColor: colors.primary }]}>

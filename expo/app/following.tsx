@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { ArrowLeft, Users as UsersIcon } from 'lucide-react-native';
+import BackButton from '@/components/BackButton';
 import { useTheme } from '@/hooks/theme-context';
 import { useUser } from '@/hooks/user-context';
 import { api } from '@/lib/api';
@@ -68,11 +69,9 @@ export default function FollowingScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.background }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={24} color={colors.text} />
-          </TouchableOpacity>
+          <BackButton onPress={() => router.back()} color={colors.text} backgroundColor="rgba(0,0,0,0.05)" />
           <Text style={[styles.headerTitle, { color: colors.text }]}>A Seguir</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: 36 }} />
         </View>
 
         {followingQuery.isLoading ? (

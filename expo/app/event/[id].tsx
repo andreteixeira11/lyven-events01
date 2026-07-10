@@ -20,6 +20,7 @@ import { SeatMap, BALTAZAR_DIAS_SEAT_MAP } from '@/components/SeatMap';
 import { isBaltazarDiasVenue } from '@/constants/venue-seat-maps';
 import { FreeBadge, isFreeEvent } from '@/components/FreeBadge';
 import { useQueryClient } from '@tanstack/react-query';
+import BackButton from '@/components/BackButton';
 
 
 export default function EventDetailScreen() {
@@ -445,13 +446,7 @@ export default function EventDetailScreen() {
           
           {/* Header Actions */}
           <SafeAreaView style={styles.headerActions}>
-            <TouchableOpacity 
-              style={styles.headerButton}
-              onPress={() => router.back()}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <ChevronLeft size={22} color="#fff" strokeWidth={2.5} style={{ marginLeft: 4 }} />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color="#fff" />
             <View style={styles.headerRight}>
               <TouchableOpacity 
                 style={styles.headerButton}

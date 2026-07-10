@@ -11,6 +11,7 @@ import { shareTicket } from '@/lib/share-utils';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
 import { PurchasedTicket } from '@/types/event';
+import BackButton from '@/components/BackButton';
 
 export default function MyTicketsScreen() {
   const { cartItems, purchasedTickets: localPurchasedTickets, getTotalPrice, removeFromCart } = useCart();
@@ -306,12 +307,7 @@ export default function MyTicketsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <ChevronLeft size={24} color={COLORS.text} />
-        </TouchableOpacity>
+        <BackButton onPress={() => router.back()} color={COLORS.text} backgroundColor="rgba(0,0,0,0.05)" />
         <Text style={styles.headerTitle}>Os Meus Bilhetes</Text>
         <TouchableOpacity 
           style={styles.faqButton}

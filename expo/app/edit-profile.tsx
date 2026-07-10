@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, User, Camera } from 'lucide-react-native';
+import BackButton from '@/components/BackButton';
 import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '@/hooks/user-context';
 import { COLORS } from '@/constants/colors';
@@ -117,9 +118,7 @@ export default function EditProfile() {
           headerTintColor: COLORS.headerText,
           headerTitleStyle: { fontWeight: 'bold' as const },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <ArrowLeft size={24} color={COLORS.headerText} />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color={COLORS.headerText} backgroundColor="{rgba(0,0,0,0.2)}" />
           ),
         }}
       />

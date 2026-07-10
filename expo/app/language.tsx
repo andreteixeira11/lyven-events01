@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Check, Globe } from 'lucide-react-native';
+import BackButton from '@/components/BackButton';
 import { useUser } from '@/hooks/user-context';
 import { useTheme } from '@/hooks/theme-context';
 import { useI18n } from '@/hooks/i18n-context';
@@ -59,9 +60,7 @@ export default function LanguageScreen() {
           headerTintColor: colors.text,
           headerTitleStyle: { fontWeight: 'bold' as const },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ArrowLeft size={24} color={colors.text} />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color={colors.text} backgroundColor="{rgba(0,0,0,0.05)}" />
           ),
         }}
       />

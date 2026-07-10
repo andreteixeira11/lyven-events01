@@ -31,6 +31,7 @@ import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import BackButton from '@/components/BackButton';
 
 type Section = 'buyers' | 'scanner' | 'stats';
 
@@ -806,9 +807,7 @@ export default function PromoterEventScreen() {
           headerStyle: { backgroundColor: '#fff' },
           headerTintColor: '#000',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ArrowLeft size={24} color="#000" />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color="#000" backgroundColor="rgba(0,0,0,0.05)" />
           ),
           headerRight: () => (
             <TouchableOpacity onPress={handleExportPDF} style={styles.exportButton}>

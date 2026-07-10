@@ -22,6 +22,7 @@ import { useUser } from '@/hooks/user-context';
 import { apiClient, api } from '@/lib/api';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
+import BackButton from '@/components/BackButton';
 
 interface ScannedTicket {
   id: string;
@@ -219,9 +220,7 @@ export default function QRScannerScreen() {
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: 'bold' as const },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <ArrowLeft size={24} color="#fff" />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color="#fff" />
           ),
           headerRight: () => (
             <TouchableOpacity onPress={toggleFlash}>

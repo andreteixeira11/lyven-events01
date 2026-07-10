@@ -24,6 +24,7 @@ import {
 import { useUser } from '@/hooks/user-context';
 import { useTheme } from '@/hooks/theme-context';
 import { RADIUS, SHADOWS, SPACING } from '@/constants/colors';
+import BackButton from '@/components/BackButton';
 
 interface Notification {
   id: string;
@@ -186,9 +187,7 @@ export default function Notifications() {
           headerTintColor: colors.white,
           headerTitleStyle: { fontWeight: '600' as const },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <ArrowLeft size={24} color={colors.white} />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color={colors.white} backgroundColor="{rgba(0,0,0,0.2)}" />
           ),
           headerRight: () => (
             <View style={styles.headerRight}>

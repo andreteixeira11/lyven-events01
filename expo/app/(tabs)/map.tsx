@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
+import BackButton from '@/components/BackButton';
 import EventMap from '@/components/EventMap';
 import AuthGuard from '@/components/AuthGuard';
 import { COLORS } from '@/constants/colors';
@@ -20,9 +21,7 @@ function MapScreenContent() {
             fontWeight: 'bold' as const
           },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 8 }}>
-              <ArrowLeft size={24} color={COLORS.headerText} />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color={COLORS.headerText} />
           )
         }} 
       />

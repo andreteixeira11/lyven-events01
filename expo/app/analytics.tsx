@@ -23,6 +23,7 @@ import { Event } from '@/types/event';
 import { api } from '@/lib/api';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
+import BackButton from '@/components/BackButton';
 
 export default function Analytics() {
   const { user } = useUser();
@@ -178,9 +179,7 @@ export default function Analytics() {
           headerStyle: { backgroundColor: '#000' },
           headerTintColor: '#fff',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ArrowLeft size={24} color="#fff" />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color="#fff" />
           ),
         }} 
       />

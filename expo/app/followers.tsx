@@ -22,6 +22,7 @@ import {
   Bell,
 } from 'lucide-react-native';
 import { useUser } from '@/hooks/user-context';
+import BackButton from '@/components/BackButton';
 
 interface Follower {
   id: string;
@@ -189,9 +190,7 @@ export default function Followers() {
           headerStyle: { backgroundColor: '#000' },
           headerTintColor: '#fff',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ArrowLeft size={24} color="#fff" />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color="#fff" />
           ),
         }} 
       />

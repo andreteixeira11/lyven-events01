@@ -36,6 +36,7 @@ import {
 import { api } from '@/lib/api';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
+import BackButton from '@/components/BackButton';
 
 interface TicketBuyer {
   id: string;
@@ -293,9 +294,7 @@ export default function BuyerDetailsScreen() {
           headerStyle: { backgroundColor: '#fff' },
           headerTintColor: '#000',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ArrowLeft size={24} color="#000" />
-            </TouchableOpacity>
+            <BackButton onPress={() => router.back()} color="#000" backgroundColor="rgba(0,0,0,0.05)" />
           ),
         }} 
       />
