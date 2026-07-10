@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import {
@@ -193,8 +195,13 @@ export default function Followers() {
           ),
         }} 
       />
+
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Text style={styles.title}>Seus Seguidores</Text>
           <Text style={styles.subtitle}>Gerencie sua audiência</Text>
@@ -287,6 +294,9 @@ export default function Followers() {
           )}
         </View>
       </ScrollView>
+
+      
+      </KeyboardAvoidingView>
     </View>
   );
 }

@@ -9,6 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { 
@@ -109,9 +111,14 @@ export default function AdminPromoters() {
         ),
       }} />
 
-      <ScrollView
+            <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+<ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => { void refetch(); void refetchPending(); }} />}
       >
         <View style={styles.searchContainer}>
@@ -183,6 +190,7 @@ export default function AdminPromoters() {
         )}
         <View style={{ height: 40 }} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

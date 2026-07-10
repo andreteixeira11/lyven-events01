@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   Modal,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -292,9 +294,14 @@ export default function AdminAds() {
         ),
       }} />
 
-      <ScrollView
+            <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+<ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refetch()} />}
       >
         <TouchableOpacity style={styles.createButton} onPress={() => { resetForm(); setShowCreateModal(true); }}>
@@ -448,6 +455,7 @@ export default function AdminAds() {
         )}
         <View style={{ height: 40 }} />
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <Modal visible={showCreateModal} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modalContainer}>

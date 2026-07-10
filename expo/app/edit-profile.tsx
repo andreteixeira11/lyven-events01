@@ -9,6 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   Image as RNImage,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, User, Camera } from 'lucide-react-native';
@@ -122,7 +124,11 @@ export default function EditProfile() {
         }}
       />
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
             {avatarUri ? (
@@ -213,6 +219,8 @@ export default function EditProfile() {
 
         <View style={styles.spacer} />
       </ScrollView>
+
+      </KeyboardAvoidingView>
     </View>
   );
 }

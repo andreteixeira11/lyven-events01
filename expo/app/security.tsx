@@ -9,6 +9,8 @@ import {
   Alert,
   Switch,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Lock, Eye, EyeOff, Shield, Smartphone } from 'lucide-react-native';
@@ -122,7 +124,11 @@ export default function Security() {
         }}
       />
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text style={styles.sectionTitle}>Alterar Palavra-passe</Text>
         <View style={styles.section}>
           <View style={styles.inputContainer}>
@@ -271,6 +277,8 @@ export default function Security() {
 
         <View style={styles.spacer} />
       </ScrollView>
+
+      </KeyboardAvoidingView>
     </View>
   );
 }

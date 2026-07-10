@@ -8,6 +8,8 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {
   Save,
@@ -624,7 +626,11 @@ export default function CreateEvent() {
             <Text style={styles.progressText}>Passo {currentStep + 1} de {totalSteps}</Text>
           </View>
 
-          <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1 }}
+          >
+          <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={styles.content}>
 
               {currentStep === 0 && (
@@ -690,6 +696,7 @@ export default function CreateEvent() {
               )}
             </View>
           </ScrollView>
+          </KeyboardAvoidingView>
 
           <View style={styles.navigationContainer}>
             <TouchableOpacity 

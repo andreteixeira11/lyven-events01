@@ -8,6 +8,8 @@ import {
   Alert,
   TextInput,
   Switch
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -298,7 +300,11 @@ export default function BuyerDetailsScreen() {
         }} 
       />
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
             <User size={48} color="#fff" />
@@ -552,6 +558,8 @@ export default function BuyerDetailsScreen() {
           </View>
         </View>
       </ScrollView>
+
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

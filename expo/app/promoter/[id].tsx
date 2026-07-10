@@ -125,7 +125,7 @@ export default function PromoterScreen() {
             onPress={() => router.back()} 
             style={styles.backButton}
           >
-            <ArrowLeft size={24} color="#fff" />
+            <ArrowLeft size={24} color="#fff" style={{ marginLeft: 2 }} />
           </TouchableOpacity>
         </View>
 

@@ -8,6 +8,7 @@ import {
   TextInput,
   Platform,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -426,8 +427,6 @@ export default function PromoterEventScreen() {
       Alert.alert('Erro', 'Ocorreu um erro ao exportar o relatório');
     }
   };
-
-
 
   const renderBuyersSection = () => (
     <View style={styles.sectionContent}>

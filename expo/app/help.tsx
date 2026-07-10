@@ -8,6 +8,8 @@ import {
   TextInput,
   Alert,
   Linking,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import {
@@ -159,8 +161,13 @@ export default function Help() {
           ),
         }} 
       />
+
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={[styles.header, { backgroundColor: colors.card }, SHADOWS.sm]}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Como podemos ajudar?</Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
@@ -212,6 +219,9 @@ export default function Help() {
               })}
             </View>
           </ScrollView>
+
+      
+      </KeyboardAvoidingView>
         </View>
 
         <View style={[styles.faqSection, { backgroundColor: colors.card }, SHADOWS.sm]}>

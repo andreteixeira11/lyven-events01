@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   Modal,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { 
@@ -364,9 +366,14 @@ export default function AdminEvents() {
         }}
       />
 
-      <ScrollView
+            <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+<ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refetchEvents()} />}
       >
         <TouchableOpacity style={styles.createButton} onPress={() => setShowCreateModal(true)}>
@@ -531,6 +538,7 @@ export default function AdminEvents() {
         )}
         <View style={{ height: 40 }} />
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <Modal visible={showCreateModal} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modalContainer}>

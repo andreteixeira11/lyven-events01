@@ -9,6 +9,7 @@ import {
   Switch,
   Alert,
   TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { 
@@ -322,8 +323,13 @@ export default function AdminSettings() {
           headerRight: () => <ProfileButton />
         }} 
       />
+
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           {/* Save/Reset Actions */}
           {hasChanges && (
@@ -533,6 +539,9 @@ export default function AdminSettings() {
           </View>
         </View>
       </ScrollView>
+
+      
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

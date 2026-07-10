@@ -11,6 +11,7 @@ import {
   Animated,
   Platform,
   Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -411,7 +412,6 @@ function NormalUserSearchContent() {
   }, [adsData]);
 
   const featuredEvents = filteredEvents.filter(e => e.isFeatured);
-
 
   const getMinPrice = (event: Event): string => {
     if (!event.ticketTypes || event.ticketTypes.length === 0) return 'Grátis';
@@ -1643,7 +1643,11 @@ function PromoterEventsContent() {
         />
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {currentEvents.length > 0 ? (
           currentEvents.map((event: Event) => (
             <EventCard key={event.id} event={event} />
@@ -1663,6 +1667,8 @@ function PromoterEventsContent() {
           </View>
         )}
       </ScrollView>
+
+      </KeyboardAvoidingView>
       
       <TouchableOpacity 
         style={[styles.floatingButton, { backgroundColor: colors.primary }]}

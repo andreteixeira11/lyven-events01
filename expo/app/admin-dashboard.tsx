@@ -10,6 +10,8 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -265,6 +267,7 @@ export default function AdminDashboard() {
     <ScrollView
       style={styles.tabContent}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={false} onRefresh={handleRefresh} />}
     >
       <View style={styles.searchContainer}>
@@ -355,6 +358,7 @@ export default function AdminDashboard() {
     <ScrollView
       style={styles.tabContent}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={false} onRefresh={handleRefresh} />}
     >
       <View style={styles.searchContainer}>
@@ -430,6 +434,7 @@ export default function AdminDashboard() {
     <ScrollView
       style={styles.tabContent}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={false} onRefresh={handleRefresh} />}
     >
       <View style={styles.approvalsHeader}>

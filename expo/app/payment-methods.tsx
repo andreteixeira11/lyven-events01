@@ -9,6 +9,8 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import {
@@ -392,7 +394,11 @@ export default function PaymentMethods() {
         }}
       />
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             Gerir Formas de Recebimento
@@ -486,6 +492,8 @@ export default function PaymentMethods() {
           <Text style={styles.addButtonText}>Adicionar Método</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      </KeyboardAvoidingView>
 
       <Modal
         visible={modalVisible}

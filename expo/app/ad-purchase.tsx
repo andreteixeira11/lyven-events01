@@ -9,6 +9,8 @@ import {
   Alert,
   Image,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -634,10 +636,18 @@ export default function AdPurchase() {
       />
       
       {currentStep !== 'confirmation' && renderStepIndicator()}
+
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {renderCurrentStep()}
       </ScrollView>
+
+      
+      </KeyboardAvoidingView>
       
       {currentStep !== 'confirmation' && (
         <View style={styles.bottomNavigation}>

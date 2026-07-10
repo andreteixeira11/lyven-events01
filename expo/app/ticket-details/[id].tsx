@@ -12,7 +12,8 @@ import {
   Share,
   TextInput,
   Modal,
-  Platform
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -350,6 +351,10 @@ export default function TicketDetailsScreen() {
           </TouchableOpacity>
         </View>
 
+        <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
         <ScrollView 
           style={styles.scrollView} 
           showsVerticalScrollIndicator={false}
@@ -398,6 +403,8 @@ export default function TicketDetailsScreen() {
               </View>
             )}
           </ScrollView>
+
+        </KeyboardAvoidingView>
 
           <View style={styles.dotsContainer}>
             {tickets.map((_, index) => (

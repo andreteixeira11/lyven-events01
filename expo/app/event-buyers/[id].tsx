@@ -8,6 +8,8 @@ import {
   TextInput,
   Image,
   Alert
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -25,7 +27,6 @@ import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { api } from '@/lib/api';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
-
 
 interface TicketBuyer {
   id: string;
