@@ -25,7 +25,7 @@ import BackButton from '@/components/BackButton';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
-  const { addToCart } = useCart();
+  const { addToCart, cartItems } = useCart();
   const { isFavorite, addToFavorites, removeFromFavorites } = useFavorites();
   const { addToCalendar, setReminder, hasReminder, isEventInCalendar } = useCalendar();
   const { colors } = useTheme();
@@ -153,7 +153,12 @@ export default function EventDetailScreen() {
     setSelectedTickets(prev => {
       const current = prev[ticketId] || 0;
       const ticketType = event.ticketTypes.find(t => t.id === ticketId);
-      const newValue = Math.max(0, Math.min(current + change, ticketType?.maxPerPerson || 0));
+      const maxPerPerson = ticketType?.maxPerPerson || 4;
+      const inCart = cartItems.find(
+        i => i.eventId === event.id && i.ticketTypeId === ticketId
+      )?.quantity || 0;
+      const effectiveMax = maxPerPerson - inCart;
+      const newValue = Math.max(0, Math.min(current + change, effectiveMax));
       
       if (newValue === 0) {
         const { [ticketId]: _, ...rest } = prev;
@@ -241,6 +246,7 @@ export default function EventDetailScreen() {
           eventImage: event.image,
           ticketTypeName: ticket.name,
           venueName: event.venue.name,
+          maxPerPerson: ticket.maxPerPerson,
         });
       }
     });
@@ -736,7 +742,7 @@ export default function EventDetailScreen() {
                           <TouchableOpacity 
                             style={[styles.quantityButton, { backgroundColor: colors.primary }]}
                             onPress={() => handleTicketChange(ticket.id, 1)}
-                            disabled={selectedTickets[ticket.id] >= ticket.maxPerPerson}
+                            disabled={(selectedTickets[ticket.id] || 0) + (cartItems.find(i => i.eventId === event.id && i.ticketTypeId === ticket.id)?.quantity || 0) >= ticket.maxPerPerson}
                           >
                             <Text style={styles.quantityButtonText}>+</Text>
                           </TouchableOpacity>

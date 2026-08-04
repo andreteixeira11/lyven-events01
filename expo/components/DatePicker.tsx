@@ -136,25 +136,29 @@ function CustomCalendar({
           return (
             <TouchableOpacity
               key={day.toISOString()}
-              style={[
-                calStyles.dayCell,
-                selected && calStyles.dayCellSelected,
-                isToday && !selected && calStyles.dayCellToday,
-              ]}
+              style={calStyles.dayCell}
               onPress={() => !disabled && onSelect(day)}
               disabled={disabled}
               activeOpacity={0.6}
             >
-              <Text
+              <View
                 style={[
-                  calStyles.dayText,
-                  disabled && calStyles.dayTextDisabled,
-                  selected && calStyles.dayTextSelected,
-                  isToday && !selected && calStyles.dayTextToday,
+                  calStyles.dayCircle,
+                  selected && calStyles.dayCircleSelected,
+                  isToday && !selected && calStyles.dayCircleToday,
                 ]}
               >
-                {day.getDate()}
-              </Text>
+                <Text
+                  style={[
+                    calStyles.dayText,
+                    disabled && calStyles.dayTextDisabled,
+                    selected && calStyles.dayTextSelected,
+                    isToday && !selected && calStyles.dayTextToday,
+                  ]}
+                >
+                  {day.getDate()}
+                </Text>
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -211,12 +215,18 @@ const calStyles = StyleSheet.create({
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 100,
   },
-  dayCellSelected: {
+  dayCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dayCircleSelected: {
     backgroundColor: COLORS.primary,
   },
-  dayCellToday: {
+  dayCircleToday: {
     backgroundColor: COLORS.primary + '15',
   },
   dayText: {

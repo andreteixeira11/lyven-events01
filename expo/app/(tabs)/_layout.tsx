@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { Search, Ticket, Home, User, BarChart3, Calendar, Target, Users, Eye, Settings as SettingsIcon, TrendingUp } from "lucide-react-native";
 import React, { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Animated, Platform } from "react-native";
+import { View, Text, StyleSheet, Animated } from "react-native";
 
 import { useCart } from "@/hooks/cart-context";
 
@@ -87,7 +87,11 @@ export default function TabLayout() {
       }
     }, [focused, scaleAnim, glowAnim, slideAnim]);
 
-    const glowOpacity = glowAnim.interpolate({
+    const indicatorWidth = glowAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 24],
+    });
+    const indicatorOpacity = glowAnim.interpolate({
       inputRange: [0, 1],
       outputRange: [0, 1],
     });
@@ -101,18 +105,14 @@ export default function TabLayout() {
       <View style={styles.iconWrapper}>
         <Animated.View
           style={[
-            styles.glowContainer,
+            styles.topIndicator,
             {
-              opacity: glowOpacity,
-              transform: [{ scale: glowAnim }],
+              width: indicatorWidth,
+              opacity: indicatorOpacity,
+              backgroundColor: colors.primary,
             },
           ]}
-        >
-          <View style={[styles.glowEffect, { 
-            backgroundColor: colors.primary,
-            shadowColor: colors.primary,
-          }]} />
-        </Animated.View>
+        />
         <Animated.View
           style={[
             styles.iconContainer,
@@ -413,30 +413,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 2,
   },
-  glowContainer: {
+  topIndicator: {
     position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
+    top: 0,
+    height: 3,
+    borderRadius: 1.5,
     zIndex: 1,
-  },
-  glowEffect: {
-    width: 64,
-    height: 44,
-    borderRadius: 22,
-    opacity: 0.14,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 6,
-      },
-      web: {
-        boxShadow: '0 0 16px rgba(0, 153, 168, 0.3)',
-      },
-    }),
   },
   badge: {
     position: 'absolute',

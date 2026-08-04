@@ -63,9 +63,11 @@ export const [CartProvider, useCart] = createContextHook<CartContextType>(() => 
       );
       
       if (existingItem) {
+        const maxPerPerson = item.maxPerPerson || existingItem.maxPerPerson || 4;
+        const mergedQty = Math.min(existingItem.quantity + item.quantity, maxPerPerson);
         return prev.map(i =>
           i.eventId === item.eventId && i.ticketTypeId === item.ticketTypeId
-            ? { ...i, quantity: i.quantity + item.quantity, price: item.price, eventTitle: item.eventTitle || i.eventTitle, eventImage: item.eventImage || i.eventImage, ticketTypeName: item.ticketTypeName || i.ticketTypeName }
+            ? { ...i, quantity: mergedQty, price: item.price, eventTitle: item.eventTitle || i.eventTitle, eventImage: item.eventImage || i.eventImage, ticketTypeName: item.ticketTypeName || i.ticketTypeName, maxPerPerson }
             : i
         );
       }

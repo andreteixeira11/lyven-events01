@@ -59,6 +59,8 @@ export interface CartItem {
   seatLabels?: string[];
   /** Venue name (used to detect seat-map venues). */
   venueName?: string;
+  /** Maximum tickets per person for this ticket type (enforced across cart merges). */
+  maxPerPerson?: number;
 }
 
 export interface PurchasedTicket {
