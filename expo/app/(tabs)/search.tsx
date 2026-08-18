@@ -42,6 +42,13 @@ import {
   Compass,
   Star,
   Check,
+  LayoutGrid,
+  Disc,
+  Wine,
+  Drama,
+  Smile,
+  PersonStanding,
+  MoreHorizontal,
 } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
 import { useTheme } from '@/hooks/theme-context';
@@ -237,13 +244,13 @@ function NormalUserSearchContent() {
   );
 
   const categories = [
-    { id: 'all', label: 'Todos', icon: '🎉' },
-    { id: 'music', label: 'Música', icon: '🎵' },
-    { id: 'festival', label: 'Festivais', icon: '🎪' },
-    { id: 'theater', label: 'Teatro', icon: '🎭' },
-    { id: 'comedy', label: 'Comédia', icon: '😂' },
-    { id: 'dance', label: 'Dança', icon: '💃' },
-    { id: 'other', label: 'Outros', icon: '🎯' },
+    { id: 'all', label: 'Todos', Icon: LayoutGrid },
+    { id: 'music', label: 'Música', Icon: Disc },
+    { id: 'festival', label: 'Festivais', Icon: Wine },
+    { id: 'theater', label: 'Teatro', Icon: Drama },
+    { id: 'comedy', label: 'Comédia', Icon: Smile },
+    { id: 'dance', label: 'Dança', Icon: PersonStanding },
+    { id: 'other', label: 'Outros', Icon: MoreHorizontal },
   ];
 
   const baseEvents: Event[] = useMemo(() => {
@@ -766,7 +773,12 @@ function NormalUserSearchContent() {
                 ]}
                 onPress={() => setSelectedCategory(cat.id)}
               >
-                <Text style={s.categoryPillIcon}>{cat.icon}</Text>
+                <cat.Icon 
+                  size={16} 
+                  color={selectedCategory === cat.id ? '#fff' : colors.textSecondary} 
+                  strokeWidth={1.5}
+                  style={s.categoryPillIcon}
+                />
                 <Text
                   style={[
                     s.categoryPillLabel,
@@ -1709,7 +1721,7 @@ const s = StyleSheet.create({
   controlsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 4, gap: 8 },
   categoriesContent: { paddingRight: 8, gap: 8 },
   categoryPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, gap: 4 },
-  categoryPillIcon: { fontSize: 16 },
+  categoryPillIcon: { marginRight: 2 },
   categoryPillLabel: { fontSize: 12, fontWeight: '600' as const },
   viewToggle: { flexDirection: 'row', borderRadius: 10, overflow: 'hidden', gap: 2 },
   viewToggleBtn: { padding: 8, borderRadius: 8 },
