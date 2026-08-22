@@ -250,17 +250,26 @@ export default function LoginScreen() {
           password,
         });
 
-        if (sendResult?.success) {
-          router.push({
-            pathname: '/verify-email',
-            params: {
-              email: email.trim().toLowerCase(),
-              name: name.trim(),
-              password,
-              userType,
-            },
-          });
+        if (!sendResult?.success) {
+          throw new Error('Falha ao gerar código de verificação. Tente novamente.');
         }
+
+        if (sendResult.emailSent === false) {
+          console.warn('[login] Verification code stored but email not sent:', sendResult.emailError);
+          setErrorMessage('Código gerado, mas o email não foi enviado. Verifica o spam ou tenta reenviar.');
+          setIsLoading(false);
+          return;
+        }
+
+        router.push({
+          pathname: '/verify-email',
+          params: {
+            email: email.trim().toLowerCase(),
+            name: name.trim(),
+            password,
+            userType,
+          },
+        });
       }
     } catch (error) {
       console.error('❌ Erro durante autenticação:', error);

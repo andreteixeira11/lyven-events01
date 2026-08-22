@@ -21,20 +21,28 @@ export async function sendEmail(payload: {
   adType?: string;
   budget?: number;
   preferences?: Record<string, boolean>;
-}): Promise<{ success: boolean }> {
+}): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log('[sendEmail] Invoking send-email edge function with type:', payload.type, 'to:', payload.email);
     const { data, error } = await supabase.functions.invoke('send-email', {
       body: payload,
     });
 
     if (error) {
-      console.warn('[sendEmail] Edge function error:', error?.message);
-      return { success: false };
+      console.warn('[sendEmail] Edge function invocation error:', error?.message, error);
+      return { success: false, error: error?.message || 'Erro ao invocar função de envio de email' };
+    }
+
+    console.log('[sendEmail] Edge function response:', data);
+
+    if (data?.error) {
+      console.warn('[sendEmail] Edge function returned error:', data.error);
+      return { success: false, error: data.error };
     }
 
     return { success: data?.success === true };
   } catch (err: any) {
-    console.warn('[sendEmail] Failed:', err?.message);
-    return { success: false };
+    console.warn('[sendEmail] Failed:', err?.message, err);
+    return { success: false, error: err?.message || 'Erro ao enviar email' };
   }
 }

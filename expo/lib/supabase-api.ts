@@ -707,7 +707,7 @@ export const authApi = {
     }
   },
 
-  sendVerificationCode: async (input: { email: string; name: string; password: string }): Promise<{ success: boolean }> => {
+  sendVerificationCode: async (input: { email: string; name: string; password: string }): Promise<{ success: boolean; emailSent?: boolean; emailError?: string }> => {
     console.log('[authApi.sendVerificationCode] Storing code in Supabase for:', input.email);
     try {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -754,14 +754,14 @@ export const authApi = {
         });
         if (result.success) {
           console.log('[authApi.sendVerificationCode] Email sent successfully');
-        } else {
-          console.warn('[authApi.sendVerificationCode] Email send failed');
+          return { success: true, emailSent: true };
         }
+        console.warn('[authApi.sendVerificationCode] Email send failed:', result.error);
+        return { success: true, emailSent: false, emailError: result.error || 'Erro ao enviar email' };
       } catch (emailErr: any) {
         console.warn('[authApi.sendVerificationCode] Failed to send email (code still stored):', emailErr?.message);
+        return { success: true, emailSent: false, emailError: emailErr?.message || 'Erro ao enviar email' };
       }
-
-      return { success: true };
     } catch (err: any) {
       console.error('[authApi.sendVerificationCode] error:', err?.message || err);
       if (err?.message?.includes('NetworkError') || err?.message?.includes('fetch')) {

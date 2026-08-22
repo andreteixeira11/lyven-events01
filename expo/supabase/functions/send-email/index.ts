@@ -219,6 +219,12 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Missing recipient email" }, 400);
     }
 
+    if (!RESEND_API_KEY) {
+      console.error("[send-email] RESEND_API_KEY is not configured");
+      return json({ error: "Email service not configured (RESEND_API_KEY missing)" }, 500);
+    }
+
+    console.log(`[send-email] Sending email to ${to} from ${FROM_EMAIL} via Resend...`);
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
@@ -227,10 +233,11 @@ Deno.serve(async (req: Request) => {
     });
 
     if (error) {
-      console.error("[send-email] Resend error:", error);
-      return json({ error: "Failed to send email" }, 500);
+      console.error("[send-email] Resend error:", JSON.stringify(error));
+      return json({ error: `Failed to send email: ${error?.message || JSON.stringify(error)}` }, 500);
     }
 
+    console.log("[send-email] Email sent successfully, id:", data?.id);
     return json({ success: true, emailId: data?.id });
   } catch (err: any) {
     console.error("[send-email] Error:", err?.message || err);

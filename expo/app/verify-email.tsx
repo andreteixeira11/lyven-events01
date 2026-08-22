@@ -51,6 +51,7 @@ export default function VerifyEmailScreen() {
   const [canResend, setCanResend] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [emailWarning, setEmailWarning] = useState('');
 
   const inputRefs = useRef<TextInput[]>([]);
 
@@ -325,9 +326,19 @@ export default function VerifyEmailScreen() {
 
     setIsLoading(true);
     setErrorMessage('');
+    setEmailWarning('');
 
     try {
-      await sendCodeMutation.mutateAsync({ email, name, password });
+      const result = await sendCodeMutation.mutateAsync({ email, name, password });
+      if (!result?.success) {
+        throw new Error('Falha ao gerar novo código. Tente novamente.');
+      }
+      if (result.emailSent === false) {
+        console.warn('[verify-email] Resend stored but email not sent:', result.emailError);
+        setEmailWarning('Código gerado, mas o email não foi enviado. Verifica a pasta de spam.');
+      } else {
+        console.log('[verify-email] Resend email sent successfully');
+      }
       setCanResend(false);
       setResendTimer(60);
     } catch (error: any) {
@@ -416,6 +427,12 @@ export default function VerifyEmailScreen() {
             {errorMessage ? (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            ) : null}
+
+            {emailWarning ? (
+              <View style={[styles.errorContainer, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+                <Text style={[styles.errorText, { color: '#92400E' }]}>{emailWarning}</Text>
               </View>
             ) : null}
 
