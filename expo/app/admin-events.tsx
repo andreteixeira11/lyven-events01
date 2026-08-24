@@ -43,6 +43,7 @@ import { api } from '@/lib/api';
 import { apiClient } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { uploadImageToBucket } from '@/utils/supabase-upload';
+import { toLocalISOString, toLocalDateString, toLocalTimeString } from '@/utils/datetime';
 import DatePicker from '@/components/DatePicker';
 import TimePicker from '@/components/TimePicker';
 
@@ -160,8 +161,8 @@ export default function AdminEvents() {
       id: e.id,
       title: e.title || '',
       description: e.description || '',
-      date: dateVal.toISOString().split('T')[0],
-      time: dateVal.toTimeString().substring(0, 5),
+      date: toLocalDateString(dateVal),
+      time: toLocalTimeString(dateVal),
       location: e.venue?.city || '',
       venue: e.venue?.name || '',
       category: e.category || 'other',
@@ -307,9 +308,7 @@ export default function AdminEvents() {
 
     try {
       console.log('📤 Admin criando evento...');
-      const hours = newEvent.eventTime.getHours().toString().padStart(2, '0');
-      const minutes = newEvent.eventTime.getMinutes().toString().padStart(2, '0');
-      const dateStr = newEvent.eventDate.toISOString().split('T')[0];
+      const eventDateTime = toLocalISOString(newEvent.eventDate, newEvent.eventTime);
 
       const eventPayload = {
         title: newEvent.title.trim(),
@@ -318,7 +317,7 @@ export default function AdminEvents() {
         venueName: newEvent.venueName.trim(),
         venueAddress: newEvent.venueAddress.trim(),
         venueCity: newEvent.venueCity.trim(),
-        date: `${dateStr}T${hours}:${minutes}:00`,
+        date: eventDateTime,
         image: newEvent.image.trim(),
         promoterId: newEvent.promoterId,
         status: 'published',

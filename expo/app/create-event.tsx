@@ -22,6 +22,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { apiClient, api } from '@/lib/api';
 import { useUser } from '@/hooks/user-context';
 import { uploadImageToBucket } from '@/utils/supabase-upload';
+import { toLocalISOString, toDateOnlyISOString } from '@/utils/datetime';
 import BasicInfoStep from '@/components/create-event/BasicInfoStep';
 import LocationStep from '@/components/create-event/LocationStep';
 import DateTimeStep, { EventDurationType } from '@/components/create-event/DateTimeStep';
@@ -309,16 +310,11 @@ export default function CreateEvent() {
     try {
       console.log('📤 Enviando evento para Supabase...');
       
-      const dateStr = formData.date.toISOString().split('T')[0];
-      const timeStr = formData.time ? 
-        `${formData.time.getHours().toString().padStart(2, '0')}:${formData.time.getMinutes().toString().padStart(2, '0')}:00` : 
-        undefined;
-
-      const fullDate = timeStr ? `${dateStr}T${timeStr}` : dateStr;
+      const fullDate = toLocalISOString(formData.date, formData.time || undefined);
 
       let endDateStr: string | undefined;
       if (formData.durationType === 'multi' && formData.endDate) {
-        endDateStr = formData.endDate.toISOString().split('T')[0];
+        endDateStr = toDateOnlyISOString(formData.endDate);
       }
 
       let finalImageUrl = formData.imageUrl || '';
@@ -388,16 +384,11 @@ export default function CreateEvent() {
     try {
       console.log('📤 Enviando evento para Supabase (com promoção)...');
       
-      const dateStr = formData.date.toISOString().split('T')[0];
-      const timeStr = formData.time ? 
-        `${formData.time.getHours().toString().padStart(2, '0')}:${formData.time.getMinutes().toString().padStart(2, '0')}:00` : 
-        undefined;
-
-      const fullDateP = timeStr ? `${dateStr}T${timeStr}` : dateStr;
+      const fullDateP = toLocalISOString(formData.date, formData.time || undefined);
 
       let endDateStrP: string | undefined;
       if (formData.durationType === 'multi' && formData.endDate) {
-        endDateStrP = formData.endDate.toISOString().split('T')[0];
+        endDateStrP = toDateOnlyISOString(formData.endDate);
       }
 
       let finalImageUrlP = formData.imageUrl || '';
