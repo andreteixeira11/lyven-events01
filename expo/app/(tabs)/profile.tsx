@@ -123,7 +123,7 @@ export default function ProfileScreen() {
             <View style={styles.guestAvatar}>
               <User size={36} color={colors.primary} />
             </View>
-            <Text style={styles.guestHeroTitle}>Bem-vindo ao Lyven</Text>
+            <Text style={styles.guestHeroTitle}>Bem-vindo à Lyven</Text>
             <Text style={styles.guestHeroSubtitle}>
               Crie uma conta para guardar favoritos, comprar bilhetes e personalizar a sua experiência.
             </Text>
