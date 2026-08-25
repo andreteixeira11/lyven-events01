@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { Ticket, Plus, Trash2, ChevronDown, ChevronUp, Gift } from 'lucide-react-native';
+import { Ticket, Plus, Trash2, ChevronDown, ChevronUp, Gift, Lock } from 'lucide-react-native';
 
 export interface TicketTypeForm {
   id: string;
@@ -16,6 +16,8 @@ export interface TicketTypeForm {
   price: string;
   quantity: string;
   description: string;
+  /** Phase status: active tickets are on sale; blocked ones are hidden from purchase (e.g. "Fase 1" when "Fase 2" opens) */
+  active?: boolean;
 }
 
 interface TicketsStepProps {
@@ -25,6 +27,7 @@ interface TicketsStepProps {
   onAddTicket: () => void;
   onRemoveTicket: (id: string) => void;
   onUpdateTicket: (id: string, field: keyof TicketTypeForm, value: string) => void;
+  onToggleTicketActive: (id: string) => void;
 }
 
 const ticketStages = [
@@ -49,6 +52,7 @@ export default function TicketsStep({
   onAddTicket,
   onRemoveTicket,
   onUpdateTicket,
+  onToggleTicketActive,
 }: TicketsStepProps) {
   const [expandedTickets, setExpandedTickets] = React.useState<Set<string>>(new Set(['1']));
   const [showStagePicker, setShowStagePicker] = React.useState<string | null>(null);
@@ -134,7 +138,7 @@ export default function TicketsStep({
                   </Text>
                   {!isExpanded && isFilled && (
                     <Text style={styles.ticketSubtitle}>
-                      {ticket.stage} • {isFreeEvent ? 'Grátis' : `€${ticket.price}`} • {ticket.quantity} bilhetes
+                      {ticket.active === false ? 'Bloqueado • ' : ''}{ticket.stage} • {isFreeEvent ? 'Grátis' : `€${ticket.price}`} • {ticket.quantity} bilhetes
                     </Text>
                   )}
                 </View>
@@ -156,6 +160,29 @@ export default function TicketsStep({
 
               {isExpanded && (
                 <>
+                  <TouchableOpacity
+                    style={[styles.phaseToggleRow, ticket.active === false && styles.phaseToggleRowBlocked]}
+                    onPress={() => onToggleTicketActive(ticket.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.phaseToggleIcon}>
+                      <Lock size={16} color={ticket.active === false ? '#FFA500' : '#0099a8'} />
+                    </View>
+                    <View style={styles.phaseToggleContent}>
+                      <Text style={[styles.phaseToggleTitle, ticket.active === false && styles.phaseToggleTitleBlocked]}>
+                        {ticket.active === false ? 'Fase bloqueada' : 'Fase ativa'}
+                      </Text>
+                      <Text style={styles.phaseToggleDescription}>
+                        {ticket.active === false
+                          ? 'Não está disponível para venda'
+                          : 'À venda na aplicação'}
+                      </Text>
+                    </View>
+                    <View style={[styles.freeEventToggle, ticket.active !== false && styles.freeEventToggleActive]}>
+                      <View style={[styles.freeEventToggleKnob, ticket.active !== false && styles.freeEventToggleKnobActive]} />
+                    </View>
+                  </TouchableOpacity>
+
                   <TextInput
                     style={styles.input}
                     value={ticket.name}
@@ -330,6 +357,45 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginTop: 4,
+  },
+  phaseToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e0f5f7',
+    borderWidth: 1,
+    borderColor: '#0099a8',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    gap: 10,
+  },
+  phaseToggleRowBlocked: {
+    backgroundColor: '#FFF8EC',
+    borderColor: '#FFA500',
+  },
+  phaseToggleIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 153, 168, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  phaseToggleContent: {
+    flex: 1,
+  },
+  phaseToggleTitle: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#0099a8',
+  },
+  phaseToggleTitleBlocked: {
+    color: '#B45309',
+  },
+  phaseToggleDescription: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
   },
   deleteButton: {
     padding: 4,

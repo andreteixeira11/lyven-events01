@@ -32,6 +32,10 @@ export default function DateTimeStep({
   onTimeChange,
   onDurationTypeChange,
 }: DateTimeStepProps) {
+  // Default 21:00 so the picker is always visible/usable even when no time is set yet
+  const defaultTime = new Date();
+  defaultTime.setHours(21, 0, 0, 0);
+  const effectiveTime = time ?? defaultTime;
 
   return (
     <View style={styles.container}>
@@ -105,15 +109,13 @@ export default function DateTimeStep({
         </View>
       )}
 
-      {time && (
-        <View style={styles.inputContainer}>
-          <TimePicker
-            label="Hora do Evento"
-            time={time}
-            onTimeChange={onTimeChange}
-          />
-        </View>
-      )}
+      <View style={styles.inputContainer}>
+        <TimePicker
+          label="Hora do Evento"
+          time={effectiveTime}
+          onTimeChange={onTimeChange}
+        />
+      </View>
     </View>
   );
 }

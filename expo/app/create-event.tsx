@@ -115,12 +115,13 @@ export default function CreateEvent() {
       const eventTime = new Date(event.date);
 
       const ticketTypes = (event.ticketTypes || []).map((ticket: any, index: number) => ({
-        id: (index + 1).toString(),
+        id: ticket.id || `tt-loaded-${index}`,
         name: ticket.name,
         stage: ticket.stage || '',
         price: ticket.price.toString(),
         quantity: ticket.available.toString(),
         description: ticket.description || '',
+        active: ticket.active !== false,
       }));
 
       const hasEndDate = !!(event as any).endDate;
@@ -273,6 +274,7 @@ export default function CreateEvent() {
           price: prev.isFreeEvent ? '0' : '',
           quantity: '',
           description: '',
+          active: true,
         },
       ],
     }));
@@ -294,6 +296,16 @@ export default function CreateEvent() {
       ...prev,
       ticketTypes: prev.ticketTypes.map(t => 
         t.id === id ? { ...t, [field]: value } : t
+      ),
+    }));
+  };
+
+  /** Blocks/unblocks a ticket phase (e.g. close "Fase 1" when "Fase 2" opens). */
+  const toggleTicketActive = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      ticketTypes: prev.ticketTypes.map(t =>
+        t.id === id ? { ...t, active: t.active === false } : t
       ),
     }));
   };
@@ -340,21 +352,25 @@ export default function CreateEvent() {
         ticketTypes: formData.ticketTypes.filter(t => 
           t.name && t.stage && t.quantity && (formData.isFreeEvent || t.price)
         ).map(t => ({
+          id: t.id,
           name: t.name,
           stage: t.stage,
           price: formData.isFreeEvent ? 0 : parseFloat(t.price),
           available: parseInt(t.quantity),
           description: t.description || '',
+          active: t.active !== false,
         })),
         image: finalImageUrl,
         promoterId: resolvedPromoterId || 'unknown',
-        status: 'pending',
+        status: isEditMode ? undefined : 'pending',
       };
 
       console.log('📦 Dados do evento:', eventData);
       console.log('📦 Promoter ID usado:', resolvedPromoterId);
 
-      const result = await apiClient.events.create.mutate(eventData);
+      const result = isEditMode && eventId
+        ? await apiClient.events.update.mutate({ id: eventId, ...eventData })
+        : await apiClient.events.create.mutate(eventData);
       
       console.log('✅ Evento criado:', result);
       
@@ -414,20 +430,24 @@ export default function CreateEvent() {
         ticketTypes: formData.ticketTypes.filter(t => 
           t.name && t.stage && t.quantity && (formData.isFreeEvent || t.price)
         ).map(t => ({
+          id: t.id,
           name: t.name,
           stage: t.stage,
           price: formData.isFreeEvent ? 0 : parseFloat(t.price),
           available: parseInt(t.quantity),
           description: t.description || '',
+          active: t.active !== false,
         })),
         image: finalImageUrlP,
         promoterId: resolvedPromoterId || 'unknown',
-        status: 'pending',
+        status: isEditMode ? undefined : 'pending',
       };
 
       console.log('📦 Dados do evento (promoção):', eventData);
 
-      const result = await apiClient.events.create.mutate(eventData);
+      const result = isEditMode && eventId
+        ? await apiClient.events.update.mutate({ id: eventId, ...eventData })
+        : await apiClient.events.create.mutate(eventData);
       
       console.log('✅ Evento criado para promoção:', result);
       
@@ -674,6 +694,7 @@ export default function CreateEvent() {
                   onAddTicket={addTicketType}
                   onRemoveTicket={removeTicketType}
                   onUpdateTicket={updateTicketType}
+                  onToggleTicketActive={toggleTicketActive}
                 />
               )}
 

@@ -248,7 +248,7 @@ export default function MyTicketsScreen() {
         <View style={styles.ticketContent}>
           <Text style={styles.ticketTitle}>{event.title}</Text>
           <Text style={styles.ticketType}>
-            {ticketType?.name ?? 'Bilhete'} {ticket.quantity > 1 ? `• ${ticket.quantity} ingresso(s)` : ''}
+            {ticketType?.name ?? 'Bilhete'} {ticket.quantity > 1 ? `• ${ticket.quantity} bilhete(s)` : ''}
           </Text>
           <View style={styles.ticketInfo}>
             <View style={styles.infoRow}>
@@ -333,7 +333,7 @@ export default function MyTicketsScreen() {
         >
           <Ticket size={18} color={activeTab === 'purchased' ? COLORS.primary : COLORS.primary} />
           <Text style={[styles.tabText, activeTab === 'purchased' && styles.activeTabText]}>
-            Meus Ingressos ({allPurchasedTickets.length})
+            Meus Bilhetes ({allPurchasedTickets.length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -345,7 +345,7 @@ export default function MyTicketsScreen() {
               <View style={styles.emptyState}>
                 <ShoppingCart size={48} color={COLORS.textSecondary} />
                 <Text style={styles.emptyTitle}>Carrinho vazio</Text>
-                <Text style={styles.emptyText}>Adicione ingressos para continuar</Text>
+                <Text style={styles.emptyText}>Adicione bilhetes para continuar</Text>
                 <TouchableOpacity 
                   style={styles.exploreButton}
                   onPress={() => router.push('/(tabs)')}
@@ -411,8 +411,8 @@ export default function MyTicketsScreen() {
           {allPurchasedTickets.length === 0 ? (
             <View style={styles.emptyState}>
               <Ticket size={48} color={COLORS.textSecondary} />
-              <Text style={styles.emptyTitle}>Sem ingressos</Text>
-              <Text style={styles.emptyText}>Seus ingressos comprados aparecerão aqui</Text>
+              <Text style={styles.emptyTitle}>Sem bilhetes</Text>
+              <Text style={styles.emptyText}>Seus bilhetes comprados aparecerão aqui</Text>
               <TouchableOpacity 
                 style={styles.exploreButton}
                 onPress={() => router.push('/(tabs)')}

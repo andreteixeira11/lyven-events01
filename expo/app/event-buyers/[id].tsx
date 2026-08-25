@@ -52,6 +52,10 @@ export default function EventBuyersScreen() {
     { id: id ?? '' },
     { enabled: !!id }
   );
+  const { data: eventStats } = api.analytics.eventStats.useQuery(
+    { eventId: (id as string) ?? '' },
+    { enabled: !!id }
+  );
   const event = eventData
     ? {
         id: eventData.id,
@@ -68,66 +72,27 @@ export default function EventBuyersScreen() {
       }
     : null;
 
-  const mockBuyers: TicketBuyer[] = useMemo(() => [
-    {
-      id: '1',
-      name: 'João Silva',
-      email: 'joao.silva@email.com',
-      phone: '+351 912 345 678',
-      ticketType: 'VIP',
-      quantity: 2,
-      purchaseDate: new Date('2025-01-15T14:30:00'),
-      totalPaid: 120,
-      qrCode: 'QR_1_VIP_1737123456',
-      isValidated: true,
-      validatedAt: new Date('2025-02-15T19:30:00')
-    },
-    {
-      id: '2',
-      name: 'Maria Santos',
-      email: 'maria.santos@email.com',
-      phone: '+351 923 456 789',
-      ticketType: 'Geral',
-      quantity: 1,
-      purchaseDate: new Date('2025-01-20T10:15:00'),
-      totalPaid: 35,
-      qrCode: 'QR_1_GERAL_1737456789',
-      isValidated: false
-    },
-    {
-      id: '3',
-      name: 'Pedro Costa',
-      email: 'pedro.costa@email.com',
-      phone: '+351 934 567 890',
-      ticketType: 'Geral',
-      quantity: 4,
-      purchaseDate: new Date('2025-01-25T16:45:00'),
-      totalPaid: 140,
-      qrCode: 'QR_1_GERAL_1737789012',
-      isValidated: false
-    },
-    {
-      id: '4',
-      name: 'Ana Ferreira',
-      email: 'ana.ferreira@email.com',
-      phone: '+351 945 678 901',
-      ticketType: 'VIP',
-      quantity: 1,
-      purchaseDate: new Date('2025-02-01T12:20:00'),
-      totalPaid: 60,
-      qrCode: 'QR_1_VIP_1738012345',
-      isValidated: true,
-      validatedAt: new Date('2025-02-15T20:15:00')
-    }
-  ], []);
+  const buyers: TicketBuyer[] = useMemo(() => (eventStats?.buyers ?? []).map((b: any) => ({
+    id: b.id,
+    name: b.name,
+    email: b.email || '—',
+    phone: b.phone || '—',
+    ticketType: b.ticketType,
+    quantity: b.quantity,
+    purchaseDate: new Date(b.purchaseDate),
+    totalPaid: b.totalPaid,
+    qrCode: b.qrCode || '',
+    isValidated: b.isValidated,
+    validatedAt: b.validatedAt ? new Date(b.validatedAt) : undefined,
+  })), [eventStats]);
 
   const filteredBuyers = useMemo(() => {
-    let buyers = mockBuyers;
+    let buyersList = buyers;
     
     // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      buyers = buyers.filter(buyer => 
+      buyersList = buyersList.filter(buyer => 
         buyer.name.toLowerCase().includes(query) ||
         buyer.email.toLowerCase().includes(query) ||
         buyer.phone.includes(query) ||
@@ -137,18 +102,18 @@ export default function EventBuyersScreen() {
     
     // Validation filter
     if (filterValidated !== 'all') {
-      buyers = buyers.filter(buyer => 
+      buyersList = buyersList.filter(buyer => 
         filterValidated === 'validated' ? buyer.isValidated : !buyer.isValidated
       );
     }
     
-    return buyers;
-  }, [searchQuery, filterValidated, mockBuyers]);
-  
-  const totalBuyers = mockBuyers.length;
-  const totalTickets = mockBuyers.reduce((sum, buyer) => sum + buyer.quantity, 0);
-  const totalRevenue = mockBuyers.reduce((sum, buyer) => sum + buyer.totalPaid, 0);
-  const validatedTickets = mockBuyers.filter(buyer => buyer.isValidated).reduce((sum, buyer) => sum + buyer.quantity, 0);
+    return buyersList;
+  }, [searchQuery, filterValidated, buyers]);
+
+  const totalBuyers = buyers.length;
+  const totalTickets = buyers.reduce((sum, buyer) => sum + buyer.quantity, 0);
+  const totalRevenue = buyers.reduce((sum, buyer) => sum + buyer.totalPaid, 0);
+  const validatedTickets = buyers.filter(buyer => buyer.isValidated).reduce((sum, buyer) => sum + buyer.quantity, 0);
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-PT', {

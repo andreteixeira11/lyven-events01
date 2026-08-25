@@ -208,7 +208,7 @@ function PromoterEventsContent() {
             </Text>
             <Text style={styles.emptySubtitle}>
               {selectedTab === 'upcoming'
-                ? 'Crie seu primeiro evento para começar a vender ingressos'
+                ? 'Crie seu primeiro evento para começar a vender bilhetes'
                 : 'Seus eventos passados aparecerão aqui'}
             </Text>
           </View>

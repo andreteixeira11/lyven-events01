@@ -490,7 +490,7 @@ export default function EventDetailScreen() {
           {typeof id === 'string' && <SocialProof eventId={id} />}
 
           {/* FOMO Alert */}
-          {!event.isSoldOut && <FOMOAlert ticketTypes={event.ticketTypes} />}
+          {!event.isSoldOut && <FOMOAlert ticketTypes={event.ticketTypes.filter(t => t.active !== false)} />}
           {event.isSoldOut && (
             <View style={styles.titleSection}>
               <View style={[styles.soldOutBadge, { backgroundColor: colors.primary }]}>
@@ -645,7 +645,7 @@ export default function EventDetailScreen() {
           {!event.isSoldOut && (
             <View style={styles.ticketsSection}>
               <View style={styles.ticketsSectionHeader}>
-                <Text style={[styles.sectionTitle, { color: colors.primary, marginBottom: 0 }]}>Ingressos</Text>
+                <Text style={[styles.sectionTitle, { color: colors.primary, marginBottom: 0 }]}>Bilhetes</Text>
                 {isFreeEvent(event) && <FreeBadge size="md" />}
               </View>
 
@@ -726,6 +726,8 @@ export default function EventDetailScreen() {
                   <View style={styles.ticketActions}>
                     {ticket.available === 0 ? (
                       <Text style={[styles.soldOutTicket, { color: colors.primary }]}>Esgotado</Text>
+                    ) : ticket.active === false ? (
+                      <Text style={[styles.soldOutTicket, { color: colors.textSecondary }]}>Bloqueado</Text>
                     ) : (
                       <>
                         <View style={[styles.quantitySelector, { backgroundColor: colors.background, borderColor: colors.border }]}>
@@ -776,7 +778,7 @@ export default function EventDetailScreen() {
             <Text style={[styles.footerTickets, { color: colors.textSecondary }]}>
               {hasSeatMap
                 ? `${selectedSeats.length} lugar(es)`
-                : `${getTotalTickets()} ingresso(s)`}
+                : `${getTotalTickets()} bilhete(s)`}
             </Text>
             <Text style={[styles.footerPrice, { color: colors.primary }]}>
               €{(hasSeatMap

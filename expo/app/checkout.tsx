@@ -13,6 +13,7 @@ import { RADIUS, SHADOWS, SPACING } from "@/constants/colors";
 import { useQueryClient } from '@tanstack/react-query';
 import BackButton from '@/components/BackButton';
 import LoginSheet from '@/components/LoginSheet';
+import { calculateCartCommission, COMMISSION_TIERS_DESCRIPTION } from '@/utils/commission';
 
 type PaymentMethod = 'card' | 'mbway' | 'multibanco';
 type CheckoutStep = 'review' | 'payment' | 'confirm';
@@ -142,7 +143,7 @@ export default function CheckoutScreen() {
   };
 
   const subtotal = getTotalPrice();
-  const serviceFee = subtotal * 0.1;
+  const serviceFee = calculateCartCommission(cartItems);
   const total = subtotal + serviceFee;
 
   const handleNextStep = () => {
@@ -412,7 +413,7 @@ export default function CheckoutScreen() {
                         style={[styles.quantityButton, { backgroundColor: colors.background, borderColor: colors.border }]}
                         onPress={() => {
                           const tt = getTicketType(item.eventId, item.ticketTypeId);
-                          const maxAllowed = tt?.maxPerPerson ?? 4;
+                          const maxAllowed = tt?.active === false ? 0 : (tt?.maxPerPerson ?? 4);
                           const maxAvailable = tt?.available ?? maxAllowed;
                           const limit = Math.min(maxAllowed, maxAvailable);
                           if (item.quantity < limit) {
@@ -423,7 +424,7 @@ export default function CheckoutScreen() {
                         }}
                         disabled={(() => {
                           const tt = getTicketType(item.eventId, item.ticketTypeId);
-                          const maxAllowed = tt?.maxPerPerson ?? 4;
+                          const maxAllowed = tt?.active === false ? 0 : (tt?.maxPerPerson ?? 4);
                           const maxAvailable = tt?.available ?? maxAllowed;
                           return item.quantity >= Math.min(maxAllowed, maxAvailable);
                         })()}
@@ -449,6 +450,9 @@ export default function CheckoutScreen() {
               <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Taxa de Serviço</Text>
               <Text style={[styles.priceValue, { color: colors.text }]}>€{serviceFee.toFixed(2)}</Text>
             </View>
+            <Text style={[styles.feeNote, { color: colors.textSecondary }]}>
+              {COMMISSION_TIERS_DESCRIPTION}
+            </Text>
             <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
               <Text style={[styles.totalLabel, { color: colors.text }]}>Total</Text>
               <Text style={[styles.totalValue, { color: colors.primary }]}>€{total.toFixed(2)}</Text>
@@ -622,9 +626,12 @@ export default function CheckoutScreen() {
           <Text style={[styles.priceValue, { color: colors.text }]}>€{subtotal.toFixed(2)}</Text>
         </View>
         <View style={styles.priceRow}>
-          <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Taxa de Serviço (10%)</Text>
+          <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Taxa de Serviço</Text>
           <Text style={[styles.priceValue, { color: colors.text }]}>€{serviceFee.toFixed(2)}</Text>
         </View>
+        <Text style={[styles.feeNote, { color: colors.textSecondary }]}>
+          {COMMISSION_TIERS_DESCRIPTION}
+        </Text>
         <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
           <Text style={[styles.totalLabel, { color: colors.text }]}>Total</Text>
           <Text style={[styles.totalValue, { color: colors.primary }]}>€{total.toFixed(2)}</Text>
@@ -682,6 +689,9 @@ export default function CheckoutScreen() {
           <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Taxa de Serviço</Text>
           <Text style={[styles.summaryValue, { color: colors.text }]}>€{serviceFee.toFixed(2)}</Text>
         </View>
+        <Text style={[styles.feeNote, { color: colors.textSecondary }]}>
+          {COMMISSION_TIERS_DESCRIPTION}
+        </Text>
         <View style={[styles.summaryTotalRow, { borderTopColor: colors.primary }]}>
           <Text style={[styles.summaryTotalLabel, { color: colors.text }]}>Total a Pagar</Text>
           <Text style={[styles.summaryTotalValue, { color: colors.primary }]}>€{total.toFixed(2)}</Text>
@@ -1077,6 +1087,12 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: 14,
     fontWeight: '600' as const,
+  },
+  feeNote: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: SPACING.sm,
+    marginTop: -2,
   },
   totalRow: {
     flexDirection: 'row',

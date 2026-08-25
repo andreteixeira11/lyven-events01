@@ -14,7 +14,7 @@ export default function FavoritesScreen() {
   const { isFavorite, removeFromFavorites, hasReminder, shareEvent, addToCalendar } = useFavorites();
   const { colors } = useTheme();
 
-  const { data: allEventsData, isLoading, error, refetch } = api.events.list.useQuery({});
+  const { data: allEventsData, isLoading, error, refetch } = api.events.list.useQuery({ status: 'published' });
 
   const favoriteEvents: Event[] = useMemo(() => {
     if (!allEventsData) return [];

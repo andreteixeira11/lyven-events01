@@ -59,14 +59,14 @@ function NormalUserExploreContent() {
     isLoading: isLoadingFeatured,
     error: featuredError,
     refetch: refetchFeatured 
-  } = api.events.list.useQuery({ featured: true });
+  } = api.events.list.useQuery({ featured: true, status: 'published' });
 
   const { 
     data: allEventsData, 
     isLoading: isLoadingEvents,
     error: eventsError,
     refetch: refetchEvents 
-  } = api.events.list.useQuery({});
+  } = api.events.list.useQuery({ status: 'published' });
 
   const { data: adsData, error: adsError } = api.advertisements.list.useQuery({ active: true });
 

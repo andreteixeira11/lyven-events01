@@ -201,7 +201,7 @@ export default function Analytics() {
           
           <StatCard
             icon={Users}
-            title="Ingressos Vendidos"
+            title="Bilhetes Vendidos"
             value={totalTicketsSold.toString()}
             subtitle="Total de vendas"
             color="#FF385C"
@@ -251,7 +251,7 @@ export default function Analytics() {
             <View style={styles.insightContent}>
               <Text style={styles.insightTitle}>Taxa de Conversão</Text>
               <Text style={styles.insightText}>
-                {totalViews > 0 ? `${((totalTicketsSold / totalViews) * 100).toFixed(1)}%` : '0%'} dos visitantes compraram ingressos
+                {totalViews > 0 ? `${((totalTicketsSold / totalViews) * 100).toFixed(1)}%` : '0%'} dos visitantes compraram bilhetes
               </Text>
             </View>
           </View>

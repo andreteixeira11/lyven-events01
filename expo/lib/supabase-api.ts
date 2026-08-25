@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { sendEmail } from './email';
 import { Event, Promoter, EventCategory } from '@/types/event';
+import { calculateTicketCommission, roundCurrency } from '@/utils/commission';
 
 function safeJsonParse<T>(val: unknown, fallback: T): T {
   if (val === null || val === undefined) return fallback;
@@ -73,13 +74,16 @@ function mapDbEventToEvent(row: any): Event {
     image: row.image || '',
     description: row.description || '',
     category: (row.category || 'other') as EventCategory,
-    ticketTypes: safeArray(row.ticket_types).map((t: any) => ({
-      id: t.id || t.ticketTypeId || '',
+    ticketTypes: safeArray(row.ticket_types).map((t: any, idx: number) => ({
+      // Fallback id guarantees each ticket type is unique — without it, types
+      // without an id all map to '' and share the same selection/cart key
+      id: t.id || t.ticketTypeId || `tt-${row.id}-${idx}`,
       name: t.name || '',
       price: t.price || 0,
       available: t.available ?? 0,
       description: t.description,
       maxPerPerson: t.maxPerPerson || 4,
+      active: t.active !== false,
     })),
     isSoldOut: row.is_sold_out || false,
     isFeatured: row.is_featured || false,
@@ -160,7 +164,10 @@ export const eventsApi = {
         image: input.image || '',
         description: input.description || '',
         category: input.category || 'other',
-        ticket_types: JSON.stringify(input.ticketTypes || []),
+        ticket_types: JSON.stringify((input.ticketTypes || []).map((t: any, i: number) => ({
+          ...t,
+          id: t.id || `tt-${i + 1}`,
+        }))),
         is_sold_out: input.isSoldOut || false,
         is_featured: input.isFeatured || false,
         duration: input.duration || null,
@@ -510,6 +517,8 @@ export const eventsApi = {
       }
       if (input?.category) query = query.eq('category', input.category);
       if (input?.venueCity) query = query.ilike('venue_city', `%${input.venueCity}%`);
+      // Public search only shows approved events
+      query = query.eq('status', 'published');
 
       const { data, error } = await query;
 
@@ -2337,6 +2346,117 @@ export const analyticsApi = {
       return { events };
     } catch {
       return { events: [] };
+    }
+  },
+
+  /**
+   * Detailed purchase stats for a single event: totals (sold, revenue,
+   * commission, net to promoter), per-ticket-type breakdown and the buyer
+   * list. Commission is charged per ticket unit using the tier table.
+   */
+  eventStats: async (input: { eventId: string }): Promise<any> => {
+    const empty = {
+      totalSold: 0, totalRevenue: 0, totalCommission: 0, netToPromoter: 0,
+      validatedCount: 0, perType: [] as any[], buyers: [] as any[],
+    };
+    try {
+      if (!input?.eventId) return empty;
+
+      const { data: event } = await supabase
+        .from('events')
+        .select('id, title, ticket_types')
+        .eq('id', input.eventId)
+        .single();
+
+      const ticketTypes: any[] = Array.isArray(event?.ticket_types) ? event.ticket_types : [];
+      const typeById = new Map<string, any>();
+      ticketTypes.forEach((t: any, idx: number) => {
+        typeById.set(t.id || `tt-${event?.id ?? input.eventId}-${idx}`, {
+          id: t.id || `tt-${event?.id ?? input.eventId}-${idx}`,
+          name: t.name || 'Bilhete',
+          price: t.price || 0,
+          available: t.available ?? 0,
+        });
+      });
+
+      const { data: tickets, error } = await supabase
+        .from('tickets')
+        .select('id, user_id, ticket_type_id, quantity, price, is_used, validated_at, purchase_date, qr_code, users(name, email, phone)')
+        .eq('event_id', input.eventId)
+        .order('purchase_date', { ascending: false });
+
+      if (error) {
+        console.error('[analyticsApi.eventStats] Supabase error:', error.message);
+        return empty;
+      }
+
+      let totalSold = 0;
+      let totalRevenue = 0;
+      let totalCommission = 0;
+      let validatedCount = 0;
+      const typeStats = new Map<string, { ticketTypeId: string; name: string; unitPrice: number; sold: number; revenue: number; commission: number; available: number }>();
+
+      const buyers = (tickets || []).map((t: any) => {
+        const typeName = typeById.get(t.ticket_type_id)?.name || 'Bilhete';
+        const unitPrice = t.price || 0;
+        const quantity = t.quantity || 0;
+        const lineRevenue = unitPrice * quantity;
+        const lineCommission = calculateTicketCommission(unitPrice) * quantity;
+
+        totalSold += quantity;
+        totalRevenue += lineRevenue;
+        totalCommission += lineCommission;
+        if (t.is_used) validatedCount += quantity;
+
+        if (!typeStats.has(t.ticket_type_id)) {
+          const tt = typeById.get(t.ticket_type_id);
+          typeStats.set(t.ticket_type_id, {
+            ticketTypeId: t.ticket_type_id,
+            name: typeName,
+            unitPrice,
+            sold: 0, revenue: 0, commission: 0,
+            available: tt?.available ?? 0,
+          });
+        }
+        const ts = typeStats.get(t.ticket_type_id)!;
+        ts.sold += quantity;
+        ts.revenue += lineRevenue;
+        ts.commission += lineCommission;
+
+        return {
+          id: t.id,
+          userId: t.user_id,
+          name: t.users?.name || 'Comprador',
+          email: t.users?.email || '',
+          phone: t.users?.phone || '',
+          ticketTypeId: t.ticket_type_id,
+          ticketType: typeName,
+          quantity,
+          unitPrice,
+          purchaseDate: t.purchase_date,
+          totalPaid: lineRevenue,
+          qrCode: t.qr_code,
+          isValidated: !!t.is_used,
+          validatedAt: t.validated_at || undefined,
+        };
+      });
+
+      return {
+        totalSold,
+        totalRevenue: roundCurrency(totalRevenue),
+        totalCommission: roundCurrency(totalCommission),
+        netToPromoter: roundCurrency(totalRevenue - totalCommission),
+        validatedCount,
+        perType: Array.from(typeStats.values()).map((ts) => ({
+          ...ts,
+          revenue: roundCurrency(ts.revenue),
+          commission: roundCurrency(ts.commission),
+        })),
+        buyers,
+      };
+    } catch (err) {
+      console.error('[analyticsApi.eventStats] error:', err);
+      return empty;
     }
   },
 

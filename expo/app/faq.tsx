@@ -31,7 +31,7 @@ const faqData: FAQItem[] = [
   {
     id: '3',
     question: 'Como acedo aos meus bilhetes?',
-    answer: 'Os seus bilhetes ficam disponíveis na secção "Meus Ingressos" da aplicação. Cada bilhete contém um código QR único que deve ser apresentado na entrada do evento.',
+    answer: 'Os seus bilhetes ficam disponíveis na secção "Meus Bilhetes" da aplicação. Cada bilhete contém um código QR único que deve ser apresentado na entrada do evento.',
   },
   {
     id: '4',

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,6 @@ import {
   CheckCircle,
   XCircle,
   DollarSign,
-  Eye,
   TrendingUp,
   Download,
   ChevronRight,
@@ -60,6 +59,10 @@ export default function PromoterEventScreen() {
     { id: id ?? '' },
     { enabled: !!id }
   );
+  const { data: eventStats } = api.analytics.eventStats.useQuery(
+    { eventId: (id as string) ?? '' },
+    { enabled: !!id }
+  );
   const event = eventData
     ? {
         id: eventData.id,
@@ -78,58 +81,19 @@ export default function PromoterEventScreen() {
       }
     : null;
 
-  const mockBuyers: TicketBuyer[] = [
-    {
-      id: '1',
-      name: 'João Silva',
-      email: 'joao.silva@email.com',
-      phone: '+351 912 345 678',
-      ticketType: 'VIP',
-      quantity: 2,
-      purchaseDate: new Date('2025-01-15T14:30:00'),
-      totalPaid: 120,
-      qrCode: 'QR_1_VIP_1737123456',
-      isValidated: true,
-      validatedAt: new Date('2025-02-15T19:30:00')
-    },
-    {
-      id: '2',
-      name: 'Maria Santos',
-      email: 'maria.santos@email.com',
-      phone: '+351 923 456 789',
-      ticketType: 'Geral',
-      quantity: 1,
-      purchaseDate: new Date('2025-01-20T10:15:00'),
-      totalPaid: 35,
-      qrCode: 'QR_1_GERAL_1737456789',
-      isValidated: false
-    },
-    {
-      id: '3',
-      name: 'Pedro Costa',
-      email: 'pedro.costa@email.com',
-      phone: '+351 934 567 890',
-      ticketType: 'Geral',
-      quantity: 4,
-      purchaseDate: new Date('2025-01-25T16:45:00'),
-      totalPaid: 140,
-      qrCode: 'QR_1_GERAL_1737789012',
-      isValidated: false
-    },
-    {
-      id: '4',
-      name: 'Ana Ferreira',
-      email: 'ana.ferreira@email.com',
-      phone: '+351 945 678 901',
-      ticketType: 'VIP',
-      quantity: 1,
-      purchaseDate: new Date('2025-02-01T12:20:00'),
-      totalPaid: 60,
-      qrCode: 'QR_1_VIP_1738012345',
-      isValidated: true,
-      validatedAt: new Date('2025-02-15T20:15:00')
-    }
-  ];
+  const buyers: TicketBuyer[] = useMemo(() => (eventStats?.buyers ?? []).map((b: any) => ({
+    id: b.id,
+    name: b.name,
+    email: b.email || '—',
+    phone: b.phone || '—',
+    ticketType: b.ticketType,
+    quantity: b.quantity,
+    purchaseDate: new Date(b.purchaseDate),
+    totalPaid: b.totalPaid,
+    qrCode: b.qrCode || '',
+    isValidated: b.isValidated,
+    validatedAt: b.validatedAt ? new Date(b.validatedAt) : undefined,
+  })), [eventStats]);
 
   if (isLoading) {
     return (
@@ -146,7 +110,7 @@ export default function PromoterEventScreen() {
     );
   }
 
-  const filteredBuyers = mockBuyers.filter(buyer => {
+  const filteredBuyers = buyers.filter(buyer => {
     const matchesSearch = searchQuery.trim() === '' || 
       buyer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       buyer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -159,10 +123,10 @@ export default function PromoterEventScreen() {
     return matchesSearch && matchesFilter;
   });
 
-  const totalBuyers = mockBuyers.length;
-  const totalTickets = mockBuyers.reduce((sum, buyer) => sum + buyer.quantity, 0);
-  const totalRevenue = mockBuyers.reduce((sum, buyer) => sum + buyer.totalPaid, 0);
-  const validatedTickets = mockBuyers.filter(buyer => buyer.isValidated).reduce((sum, buyer) => sum + buyer.quantity, 0);
+  const totalBuyers = buyers.length;
+  const totalTickets = buyers.reduce((sum, buyer) => sum + buyer.quantity, 0);
+  const totalRevenue = buyers.reduce((sum, buyer) => sum + buyer.totalPaid, 0);
+  const validatedTickets = buyers.filter(buyer => buyer.isValidated).reduce((sum, buyer) => sum + buyer.quantity, 0);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-PT', {
@@ -346,8 +310,8 @@ export default function PromoterEventScreen() {
           <div class="progress-section">
             <h3 style="margin: 0 0 15px 0; color: #333;">Progresso de Validação</h3>
             <div class="progress-bar">
-              <div class="progress-fill" style="width: ${(validatedTickets / totalTickets) * 100}%">
-                ${Math.round((validatedTickets / totalTickets) * 100)}%
+              <div class="progress-fill" style="width: ${totalTickets > 0 ? Math.round((validatedTickets / totalTickets) * 100) : 0}%">
+                ${totalTickets > 0 ? Math.round((validatedTickets / totalTickets) * 100) : 0}%
               </div>
             </div>
             <p style="text-align: center; color: #666; font-size: 14px; margin-top: 10px;">
@@ -370,7 +334,7 @@ export default function PromoterEventScreen() {
               </tr>
             </thead>
             <tbody>
-              ${mockBuyers.map(buyer => `
+              ${buyers.map(buyer => `
                 <tr>
                   <td>${buyer.name}</td>
                   <td>${buyer.email}</td>
@@ -387,12 +351,11 @@ export default function PromoterEventScreen() {
             </tbody>
           </table>
 
-          <h2 class="section-title">Análise de Conversão</h2>
+          <h2 class="section-title">Comissão Lyven</h2>
           <div class="event-info">
-            <p><strong>Visualizações:</strong> 12,400</p>
-            <p><strong>Cliques:</strong> 1,850</p>
-            <p><strong>Compras:</strong> ${totalBuyers}</p>
-            <p><strong>Taxa de Conversão:</strong> 3.2%</p>
+            <p><strong>Valor Comprado:</strong> ${formatCurrency(totalRevenue)}</p>
+            <p><strong>Comissão Lyven:</strong> ${formatCurrency(eventStats?.totalCommission ?? 0)}</p>
+            <p><strong>Líquido p/ Promotor:</strong> ${formatCurrency(eventStats?.netToPromoter ?? 0)}</p>
           </div>
 
           <div class="footer">
@@ -532,7 +495,7 @@ export default function PromoterEventScreen() {
   );
 
   const renderScannerSection = () => {
-    const pendingBuyers = mockBuyers.filter(buyer => !buyer.isValidated);
+    const pendingBuyers = buyers.filter(buyer => !buyer.isValidated);
 
     return (
       <View style={styles.sectionContent}>
@@ -574,12 +537,12 @@ export default function PromoterEventScreen() {
                 <View 
                   style={[
                     styles.progressFill, 
-                    { width: `${(validatedTickets / totalTickets) * 100}%` }
+                    { width: `${totalTickets > 0 ? (validatedTickets / totalTickets) * 100 : 0}%` }
                   ]} 
                 />
               </View>
               <Text style={styles.progressText}>
-                {Math.round((validatedTickets / totalTickets) * 100)}% dos bilhetes foram validados
+                {totalTickets > 0 ? Math.round((validatedTickets / totalTickets) * 100) : 0}% dos bilhetes foram validados
               </Text>
             </View>
           </>
@@ -664,7 +627,7 @@ export default function PromoterEventScreen() {
   const getSalesOverTime = () => {
     const salesByDate: { [key: string]: { tickets: number; revenue: number } } = {};
     
-    mockBuyers.forEach(buyer => {
+    buyers.forEach(buyer => {
       const dateKey = new Intl.DateTimeFormat('pt-PT', {
         day: '2-digit',
         month: 'short'
@@ -680,10 +643,10 @@ export default function PromoterEventScreen() {
     
     return Object.entries(salesByDate)
       .sort((a, b) => {
-        const dateA = mockBuyers.find(buyer => 
+        const dateA = buyers.find(buyer => 
           new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: 'short' }).format(buyer.purchaseDate) === a[0]
         )?.purchaseDate;
-        const dateB = mockBuyers.find(buyer => 
+        const dateB = buyers.find(buyer => 
           new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: 'short' }).format(buyer.purchaseDate) === b[0]
         )?.purchaseDate;
         return (dateA?.getTime() || 0) - (dateB?.getTime() || 0);
@@ -704,20 +667,12 @@ export default function PromoterEventScreen() {
               <DollarSign size={20} color="#00C851" />
               <Text style={styles.largeStatValue}>{formatCurrency(totalRevenue)}</Text>
               <Text style={styles.largeStatLabel}>Receita Total</Text>
-              <View style={styles.trendContainer}>
-                <TrendingUp size={14} color="#00C851" />
-                <Text style={styles.trendText}>+12.5%</Text>
-              </View>
             </View>
             
             <View style={styles.largeStatCard}>
               <Users size={20} color="#0099a8" />
               <Text style={styles.largeStatValue}>{totalBuyers}</Text>
               <Text style={styles.largeStatLabel}>Total de Compradores</Text>
-              <View style={styles.trendContainer}>
-                <TrendingUp size={14} color="#0099a8" />
-                <Text style={styles.trendText}>+8.3%</Text>
-              </View>
             </View>
 
             <View style={styles.largeStatCard}>
@@ -728,15 +683,30 @@ export default function PromoterEventScreen() {
             </View>
 
             <View style={styles.largeStatCard}>
-              <Eye size={20} color="#FF385C" />
-              <Text style={styles.largeStatValue}>12.4K</Text>
-              <Text style={styles.largeStatLabel}>Visualizações</Text>
-              <View style={styles.trendContainer}>
-                <TrendingUp size={14} color="#FF385C" />
-                <Text style={styles.trendText}>+15.2%</Text>
-              </View>
+              <TrendingUp size={20} color="#FF385C" />
+              <Text style={styles.largeStatValue}>{formatCurrency(eventStats?.netToPromoter ?? 0)}</Text>
+              <Text style={styles.largeStatLabel}>Líquido p/ Promotor</Text>
+              <Text style={styles.subStatText}>após comissão de {formatCurrency(eventStats?.totalCommission ?? 0)}</Text>
             </View>
           </View>
+
+          {(eventStats?.perType ?? []).length > 0 && (
+            <View style={styles.typeBreakdownSection}>
+              <Text style={styles.chartTitle}>Vendas por Tipo de Bilhete</Text>
+              {(eventStats?.perType ?? []).map((tt: any) => (
+                <View key={tt.ticketTypeId} style={styles.typeBreakdownRow}>
+                  <View style={styles.typeBreakdownLeft}>
+                    <Text style={styles.typeBreakdownName}>{tt.name}</Text>
+                    <Text style={styles.typeBreakdownSub}>{tt.sold} vendidos · {formatCurrency(tt.unitPrice)}/bilhete</Text>
+                  </View>
+                  <View style={styles.typeBreakdownRight}>
+                    <Text style={styles.typeBreakdownValue}>{formatCurrency(tt.revenue)}</Text>
+                    <Text style={styles.typeBreakdownSub}>comissão {formatCurrency(tt.commission)}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
 
           <View style={styles.chartSection}>
             <Text style={styles.chartTitle}>Vendas ao Longo do Tempo</Text>
@@ -1293,6 +1263,45 @@ const styles = StyleSheet.create({
     fontWeight: 'bold' as const,
     color: '#000',
     marginBottom: 16,
+  },
+  typeBreakdownSection: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  typeBreakdownRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  typeBreakdownLeft: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  typeBreakdownRight: {
+    alignItems: 'flex-end' as const,
+  },
+  typeBreakdownName: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: '#333',
+  },
+  typeBreakdownValue: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#0099a8',
+  },
+  typeBreakdownSub: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
   },
   chartPlaceholder: {
     height: 200,

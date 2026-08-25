@@ -213,7 +213,7 @@ export default function TicketDetailsScreen() {
 
   const handleDownloadTicket = async () => {
     Alert.alert(
-      'Baixar Ingresso',
+      'Baixar Bilhete',
       'O PDF do seu bilhete será enviado para o email registado.',
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -231,7 +231,7 @@ export default function TicketDetailsScreen() {
 
   const handleTicketInfo = () => {
     Alert.alert(
-      'Informações do Ingresso',
+      'Informações do Bilhete',
       `📋 Tipo: ${tickets[0]?.ticketType ?? 'Bilhete'}\n` +
       `🎫 Quantidade: ${tickets.length}\n` +
       `✅ Estado: Válido\n` +
@@ -490,7 +490,7 @@ export default function TicketDetailsScreen() {
             />
             <MenuItem
               icon={<Download size={24} color={colors.text} />}
-              label="Baixar ingresso (PDF)"
+              label="Baixar bilhete (PDF)"
               onPress={handleDownloadTicket}
               colors={colors}
             />
@@ -502,7 +502,7 @@ export default function TicketDetailsScreen() {
             />
             <MenuItem
               icon={<BookmarkCheck size={24} color={colors.text} />}
-              label="Informações dos ingressos"
+              label="Informações dos bilhetes"
               onPress={handleTicketInfo}
               colors={colors}
             />

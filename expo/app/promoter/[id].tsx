@@ -22,7 +22,7 @@ export default function PromoterScreen() {
 
   const promoterId = Array.isArray(id) ? id[0] : id;
 
-  const eventsQuery = api.events.list.useQuery();
+  const eventsQuery = api.events.list.useQuery({ status: 'published' });
   
   const isFollowingQuery = api.social.isFollowing.useQuery(
     {

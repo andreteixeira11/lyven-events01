@@ -35,6 +35,7 @@ import {
   ChevronRight,
   Trash2,
   Ban,
+  Percent,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '@/constants/colors';
@@ -132,6 +133,11 @@ export default function AdminEvents() {
   const [showStagePicker, setShowStagePicker] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  const { data: eventStats } = api.analytics.eventStats.useQuery(
+    { eventId: selectedEvent?.id || '' },
+    { enabled: !!selectedEvent?.id }
+  );
 
   const addTicketType = () => {
     const newId = (ticketTypes.length + 1).toString();
@@ -882,6 +888,52 @@ export default function AdminEvents() {
                 </View>
 
                 <View style={styles.detailInfoSection}>
+                  <Text style={styles.detailSectionTitle}>Estatísticas de Compra</Text>
+                  <View style={styles.detailStatsGrid}>
+                    <View style={styles.detailStatCard}>
+                      <View style={[styles.detailStatIcon, { backgroundColor: COLORS.success + '15' }]}>
+                        <DollarSign size={20} color={COLORS.success} />
+                      </View>
+                      <Text style={styles.detailStatValue}>{`€${(eventStats?.totalRevenue ?? 0).toFixed(2)}`}</Text>
+                      <Text style={styles.detailStatLabel}>Valor Comprado</Text>
+                    </View>
+                    <View style={styles.detailStatCard}>
+                      <View style={[styles.detailStatIcon, { backgroundColor: COLORS.warning + '15' }]}>
+                        <Percent size={20} color={COLORS.warning} />
+                      </View>
+                      <Text style={styles.detailStatValue}>{`€${(eventStats?.totalCommission ?? 0).toFixed(2)}`}</Text>
+                      <Text style={styles.detailStatLabel}>Comissão Lyven</Text>
+                    </View>
+                    <View style={styles.detailStatCard}>
+                      <View style={[styles.detailStatIcon, { backgroundColor: COLORS.primary + '15' }]}>
+                        <DollarSign size={20} color={COLORS.primary} />
+                      </View>
+                      <Text style={styles.detailStatValue}>{`€${(eventStats?.netToPromoter ?? 0).toFixed(2)}`}</Text>
+                      <Text style={styles.detailStatLabel}>Líquido Promotor</Text>
+                    </View>
+                  </View>
+
+                  {(eventStats?.perType ?? []).length > 0 && (
+                    <View style={styles.typeStatsList}>
+                      <View style={styles.typeStatsHeader}>
+                        <Text style={[styles.typeStatsHeaderText, { flex: 2 }]}>Tipo</Text>
+                        <Text style={[styles.typeStatsHeaderText, { flex: 1, textAlign: 'center' }]}>Vendidos</Text>
+                        <Text style={[styles.typeStatsHeaderText, { flex: 1, textAlign: 'right' }]}>Valor</Text>
+                        <Text style={[styles.typeStatsHeaderText, { flex: 1, textAlign: 'right' }]}>Comissão</Text>
+                      </View>
+                      {(eventStats.perType).map((tt: any) => (
+                        <View key={tt.ticketTypeId} style={styles.typeStatsRow}>
+                          <Text style={[styles.typeStatsRowText, { flex: 2 }]} numberOfLines={1}>{tt.name}</Text>
+                          <Text style={[styles.typeStatsRowText, { flex: 1, textAlign: 'center' }]}>{tt.sold}</Text>
+                          <Text style={[styles.typeStatsRowText, { flex: 1, textAlign: 'right' }]}>{`€${tt.revenue.toFixed(2)}`}</Text>
+                          <Text style={[styles.typeStatsRowText, { flex: 1, textAlign: 'right', color: COLORS.warning }]}>{`€${tt.commission.toFixed(2)}`}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.detailInfoSection}>
                   <Text style={styles.detailSectionTitle}>Informações</Text>
                   <View style={styles.detailInfoRow}>
                     <Calendar size={18} color={COLORS.primary} />
@@ -1160,6 +1212,21 @@ const styles = StyleSheet.create({
   },
   detailStatLabel: {
     fontSize: 12, color: COLORS.textSecondary,
+  },
+  typeStatsList: {
+    marginTop: 4, borderWidth: 1, borderColor: COLORS.lightGray, borderRadius: 10, padding: 10,
+  },
+  typeStatsHeader: {
+    flexDirection: 'row' as const, paddingBottom: 6, marginBottom: 4, borderBottomWidth: 1, borderBottomColor: COLORS.lightGray,
+  },
+  typeStatsHeaderText: {
+    fontSize: 11, fontWeight: 'bold' as const, color: COLORS.textSecondary,
+  },
+  typeStatsRow: {
+    flexDirection: 'row' as const, alignItems: 'center' as const, paddingVertical: 6,
+  },
+  typeStatsRowText: {
+    fontSize: 13, color: COLORS.text, fontWeight: '500' as const,
   },
   detailInfoSection: {
     backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 20,

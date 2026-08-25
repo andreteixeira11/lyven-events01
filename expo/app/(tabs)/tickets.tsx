@@ -27,6 +27,7 @@ import {
   Plus,
 } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
+import { calculateCartCommission, COMMISSION_TIERS_DESCRIPTION } from '@/utils/commission';
 import { useUser } from '@/hooks/user-context';
 import { useTheme } from '@/hooks/theme-context';
 import { useCart } from '@/hooks/cart-context';
@@ -397,7 +398,7 @@ function NormalUserTicketsContent() {
   return (
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Ingressos</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Bilhetes</Text>
       </View>
 
       <View style={[styles.tabContainer, { backgroundColor: colors.background }]}>
@@ -485,9 +486,9 @@ function NormalUserTicketsContent() {
               {upcomingTickets.length === 0 && (
                 <View style={styles.emptyState}>
                   <Calendar size={64} color={colors.textSecondary} />
-                  <Text style={[styles.emptyTitle, { color: colors.text }]}>Nenhum ingresso próximo</Text>
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>Nenhum bilhete próximo</Text>
                   <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                    Explore eventos e compre seus ingressos
+                    Explore eventos e compre seus bilhetes
                   </Text>
                   <TouchableOpacity
                     style={[styles.exploreButton, { backgroundColor: colors.primary }]}
@@ -507,9 +508,9 @@ function NormalUserTicketsContent() {
               ) : (
                 <View style={styles.emptyState}>
                   <Calendar size={64} color={colors.textSecondary} />
-                  <Text style={[styles.emptyTitle, { color: colors.text }]}>Nenhum ingresso passado</Text>
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>Nenhum bilhete passado</Text>
                   <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                    Seus ingressos usados aparecerão aqui
+                    Seus bilhetes usados aparecerão aqui
                   </Text>
                 </View>
               )}
@@ -543,7 +544,15 @@ function NormalUserTicketsContent() {
                           <Text style={[styles.quantityText, { color: colors.text }]}>{item.quantity}</Text>
                           <TouchableOpacity
                             style={[styles.quantityButton, { backgroundColor: colors.border }]}
-                            onPress={() => updateQuantity(item.eventId, item.ticketTypeId, item.quantity + 1)}
+                            onPress={() => {
+                              const limit = item.maxPerPerson || 4;
+                              if (item.quantity < limit) {
+                                updateQuantity(item.eventId, item.ticketTypeId, item.quantity + 1);
+                              } else {
+                                Alert.alert('Limite atingido', `Máximo de ${limit} bilhetes deste tipo por pessoa.`);
+                              }
+                            }}
+                            disabled={item.quantity >= (item.maxPerPerson || 4)}
                           >
                             <Plus size={16} color={colors.text} />
                           </TouchableOpacity>
@@ -565,12 +574,15 @@ function NormalUserTicketsContent() {
                     </View>
                     <View style={styles.cartSummaryRow}>
                       <Text style={[styles.cartSummaryLabel, { color: colors.textSecondary }]}>Taxa de serviço</Text>
-                      <Text style={[styles.cartSummaryValue, { color: colors.text }]}>€{(getTotalPrice() * 0.05).toFixed(2)}</Text>
+                      <Text style={[styles.cartSummaryValue, { color: colors.text }]}>€{calculateCartCommission(cartItems).toFixed(2)}</Text>
                     </View>
+                    <Text style={[styles.cartFeeNote, { color: colors.textSecondary }]}>
+                      {COMMISSION_TIERS_DESCRIPTION}
+                    </Text>
                     <View style={[styles.cartSummaryDivider, { backgroundColor: colors.border }]} />
                     <View style={styles.cartSummaryRow}>
                       <Text style={[styles.cartTotalLabel, { color: colors.text }]}>Total</Text>
-                      <Text style={[styles.cartTotalValue, { color: colors.primary }]}>€{(getTotalPrice() * 1.05).toFixed(2)}</Text>
+                      <Text style={[styles.cartTotalValue, { color: colors.primary }]}>€{(getTotalPrice() + calculateCartCommission(cartItems)).toFixed(2)}</Text>
                     </View>
                   </View>
 
@@ -587,7 +599,7 @@ function NormalUserTicketsContent() {
                   <ShoppingCart size={64} color={colors.textSecondary} />
                   <Text style={[styles.emptyTitle, { color: colors.text }]}>Carrinho vazio</Text>
                   <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                    Adicione ingressos ao seu carrinho para continuar
+                    Adicione bilhetes ao seu carrinho para continuar
                   </Text>
                   <TouchableOpacity
                     style={[styles.exploreButton, { backgroundColor: colors.primary }]}
@@ -1208,6 +1220,11 @@ const styles = StyleSheet.create({
   cartSummaryValue: {
     fontSize: 14,
     fontWeight: '500' as const,
+  },
+  cartFeeNote: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 8,
   },
   cartSummaryDivider: {
     height: 1,

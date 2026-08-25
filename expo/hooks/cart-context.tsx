@@ -87,13 +87,14 @@ export const [CartProvider, useCart] = createContextHook<CartContextType>(() => 
       removeFromCart(eventId, ticketTypeId);
       return;
     }
-    
+
     setCartItems(prev =>
-      prev.map(i =>
-        i.eventId === eventId && i.ticketTypeId === ticketTypeId
-          ? { ...i, quantity }
-          : i
-      )
+      prev.map(i => {
+        if (!(i.eventId === eventId && i.ticketTypeId === ticketTypeId)) return i;
+        // Never allow bypassing the per-person limit via the cart/checkout controls
+        const maxPerPerson = i.maxPerPerson || 4;
+        return { ...i, quantity: Math.min(quantity, maxPerPerson) };
+      })
     );
   };
 

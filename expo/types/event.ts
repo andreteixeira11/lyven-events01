@@ -20,6 +20,8 @@ export interface TicketType {
   available: number;
   description?: string;
   maxPerPerson: number;
+  /** Phase status: false = blocked from sale (e.g. "Fase 1" when "Fase 2" opens) */
+  active?: boolean;
 }
 
 export interface Event {

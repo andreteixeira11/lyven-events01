@@ -213,7 +213,7 @@ function NormalUserSearchContent() {
     error: eventsError,
     refetch: refetchEvents 
   } = api.events.list.useQuery(
-    { category: selectedCategory === 'all' ? undefined : selectedCategory as any },
+    { category: selectedCategory === 'all' ? undefined : selectedCategory as any, status: 'published' },
     { enabled: debouncedSearchQuery.length === 0 }
   );
 
@@ -1672,7 +1672,7 @@ function PromoterEventsContent() {
             </Text>
             <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
               {selectedTab === 'upcoming' 
-                ? 'Crie seu primeiro evento para começar a vender ingressos'
+                ? 'Crie seu primeiro evento para começar a vender bilhetes'
                 : 'Seus eventos passados aparecerão aqui'
               }
             </Text>
