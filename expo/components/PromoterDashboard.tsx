@@ -18,6 +18,8 @@ import {
   Calendar,
   Eye,
   Target,
+  Percent,
+  Wallet,
 } from 'lucide-react-native';
 import { Image } from 'react-native';
 import { router } from 'expo-router';
@@ -51,6 +53,14 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
   );
 
   const {
+    data: revenueData,
+    refetch: refetchRevenue,
+  } = api.analytics.promoterStats.useQuery(
+    { promoterId: resolvedPromoterId ?? '' },
+    { enabled: !!resolvedPromoterId }
+  );
+
+  const {
     data: eventsData,
     isLoading: eventsLoading,
     refetch,
@@ -69,10 +79,10 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      await refetch();
+      await Promise.all([refetch(), refetchRevenue()]);
     } catch {}
     setRefreshing(false);
-  }, [refetch]);
+  }, [refetch, refetchRevenue]);
 
   const events = eventsData ?? [];
   const stats = statsData ?? {
@@ -81,6 +91,12 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
     totalRevenue: 0,
     followersCount: 0,
     upcomingEvents: 0,
+  };
+  const revenue = revenueData ?? {
+    totalSold: 0,
+    grossRevenue: 0,
+    totalCommission: 0,
+    netToPromoter: 0,
   };
 
   const ads = adsData?.ads ?? [];
@@ -158,25 +174,28 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
 
         <View style={styles.statsGrid}>
           {renderStatCard(
-            'Receita Total',
-            formatCurrency(stats.totalRevenue),
-            <Euro size={20} color={colors.primary} />
+            'Receita Bruta',
+            formatCurrency(revenue.grossRevenue),
+            <Euro size={20} color={colors.success ?? colors.primary} />,
+            () => router.push('/analytics')
+          )}
+          {renderStatCard(
+            'Líquido p/ Promotor',
+            formatCurrency(revenue.netToPromoter),
+            <Wallet size={20} color={colors.primary} />,
+            () => router.push('/analytics')
+          )}
+          {renderStatCard(
+            'Comissão Lyven',
+            formatCurrency(revenue.totalCommission),
+            <Percent size={20} color={colors.error ?? colors.primary} />,
+            () => router.push('/analytics')
           )}
           {renderStatCard(
             'Bilhetes Vendidos',
-            formatNumber(stats.totalTicketsSold),
-            <Ticket size={20} color={colors.primary} />
-          )}
-          {renderStatCard(
-            'Seguidores',
-            formatNumber(stats.followersCount),
-            <Users size={20} color={colors.primary} />
-          )}
-          {renderStatCard(
-            'Eventos Próximos',
-            String(upcomingEvents.length),
-            <Calendar size={20} color={colors.primary} />,
-            () => router.push('/(tabs)/promoter-events' as any)
+            formatNumber(revenue.totalSold),
+            <Ticket size={20} color={colors.primary} />,
+            () => router.push('/analytics')
           )}
         </View>
 
@@ -200,7 +219,12 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
             <View style={[styles.summaryDivider, { backgroundColor: colors.borderLight }]} />
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Bilhetes Vendidos</Text>
-              <Text style={[styles.summaryValue, { color: colors.primary }]}>{stats.totalTicketsSold}</Text>
+              <Text style={[styles.summaryValue, { color: colors.primary }]}>{revenue.totalSold}</Text>
+            </View>
+            <View style={[styles.summaryDivider, { backgroundColor: colors.borderLight }]} />
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Seguidores</Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>{formatNumber(stats.followersCount)}</Text>
             </View>
           </View>
         </View>
