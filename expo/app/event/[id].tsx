@@ -145,6 +145,26 @@ export default function EventDetailScreen() {
     }).format(date);
   };
 
+  /** End-time suffix for the hero date, e.g. " – 02:00" or " até 18 set, 02:00". */
+  const formatEndInfo = (start: Date, end?: Date): string => {
+    if (!end) return '';
+    const hasTime = end.getHours() !== 0 || end.getMinutes() !== 0;
+    if (!hasTime) return '';
+    const sameDay = start.toDateString() === end.toDateString();
+    const endTime = new Intl.DateTimeFormat('pt-PT', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(end);
+    if (sameDay) return ` – ${endTime}`;
+    const endDate = new Intl.DateTimeFormat('pt-PT', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(end);
+    return ` até ${endDate}`;
+  };
+
   const handleTicketChange = (ticketId: string, change: number) => {
     if (Platform.OS !== 'web') {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -479,7 +499,7 @@ export default function EventDetailScreen() {
             <Text style={styles.heroTitle}>{event.title}</Text>
             <View style={styles.heroDateRow}>
               <Calendar size={16} color="#fff" />
-              <Text style={styles.heroDate}>{formatDate(event.date)}</Text>
+              <Text style={styles.heroDate}>{formatDate(event.date)}{formatEndInfo(event.date, event.endDate)}</Text>
             </View>
           </View>
         </View>

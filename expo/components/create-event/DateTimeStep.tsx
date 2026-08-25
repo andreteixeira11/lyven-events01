@@ -15,10 +15,12 @@ interface DateTimeStepProps {
   date: Date;
   endDate?: Date;
   time?: Date;
+  endTime?: Date;
   durationType?: EventDurationType;
   onDateChange: (date: Date) => void;
   onEndDateChange?: (date: Date | undefined) => void;
   onTimeChange: (time: Date) => void;
+  onEndTimeChange?: (time: Date | undefined) => void;
   onDurationTypeChange?: (type: EventDurationType) => void;
 }
 
@@ -26,16 +28,22 @@ export default function DateTimeStep({
   date,
   endDate,
   time,
+  endTime,
   durationType = 'single',
   onDateChange,
   onEndDateChange,
   onTimeChange,
+  onEndTimeChange,
   onDurationTypeChange,
 }: DateTimeStepProps) {
   // Default 21:00 so the picker is always visible/usable even when no time is set yet
   const defaultTime = new Date();
   defaultTime.setHours(21, 0, 0, 0);
   const effectiveTime = time ?? defaultTime;
+
+  /** Default end time offered when the promoter adds one (23:00). */
+  const defaultEndTime = new Date();
+  defaultEndTime.setHours(23, 0, 0, 0);
 
   return (
     <View style={styles.container}>
@@ -111,11 +119,37 @@ export default function DateTimeStep({
 
       <View style={styles.inputContainer}>
         <TimePicker
-          label="Hora do Evento"
+          label="Hora de Início"
           time={effectiveTime}
           onTimeChange={onTimeChange}
         />
       </View>
+
+      {endTime ? (
+        <View style={styles.inputContainer}>
+          <TimePicker
+            label="Hora de Fim"
+            time={endTime}
+            onTimeChange={(t) => onEndTimeChange?.(t)}
+          />
+          <TouchableOpacity
+            style={styles.removeEndTimeButton}
+            onPress={() => onEndTimeChange?.(undefined)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.removeEndTimeText}>Remover hora de fim</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={styles.addEndTimeButton}
+          onPress={() => onEndTimeChange?.(defaultEndTime)}
+          activeOpacity={0.7}
+        >
+          <Clock size={18} color="#0099a8" />
+          <Text style={styles.addEndTimeText}>Adicionar hora de fim (opcional)</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -167,6 +201,34 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: 24,
+  },
+  addEndTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 9999,
+    borderWidth: 2,
+    borderColor: '#0099a8',
+    borderStyle: 'dashed',
+    backgroundColor: '#fff',
+  },
+  addEndTimeText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#0099a8',
+  },
+  removeEndTimeButton: {
+    alignSelf: 'center',
+    marginTop: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+  },
+  removeEndTimeText: {
+    fontSize: 13,
+    color: '#c0392b',
+    fontWeight: '500' as const,
   },
   durationInfo: {
     marginTop: 8,

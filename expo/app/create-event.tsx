@@ -37,6 +37,7 @@ interface EventFormData {
   date: Date;
   endDate?: Date;
   time?: Date;
+  endTime?: Date;
   durationType: EventDurationType;
   category: string;
   isFreeEvent: boolean;
@@ -71,6 +72,7 @@ export default function CreateEvent() {
     date: new Date(),
     endDate: undefined,
     time: undefined,
+    endTime: undefined,
     durationType: 'single',
     category: '',
     isFreeEvent: false,
@@ -126,6 +128,11 @@ export default function CreateEvent() {
 
       const hasEndDate = !!(event as any).endDate;
       const endDateVal = hasEndDate ? new Date((event as any).endDate) : undefined;
+      // Legacy events stored a date-only end (midnight); only offer an end time
+      // when the stored value actually carries a time of day.
+      const endTimeVal = endDateVal && (endDateVal.getHours() !== 0 || endDateVal.getMinutes() !== 0)
+        ? endDateVal
+        : undefined;
 
       setFormData({
         title: event.title,
@@ -135,6 +142,7 @@ export default function CreateEvent() {
         date: eventDate,
         endDate: endDateVal,
         time: eventTime,
+        endTime: endTimeVal,
         durationType: hasEndDate ? 'multi' : 'single',
         category: event.category,
         isFreeEvent: (event.ticketTypes || []).some((tt: any) => parseFloat(tt.price) === 0),
@@ -310,6 +318,27 @@ export default function CreateEvent() {
     }));
   };
 
+  /** Builds the end date/time string, applying the optional end time and rolling past-midnight ends to the next day. */
+  const buildEndDateStr = (): string | undefined => {
+    if (formData.durationType === 'multi' && formData.endDate) {
+      return formData.endTime
+        ? toLocalISOString(formData.endDate, formData.endTime)
+        : toDateOnlyISOString(formData.endDate);
+    }
+    if (formData.endTime) {
+      const end = new Date(formData.date);
+      end.setHours(formData.endTime.getHours(), formData.endTime.getMinutes(), 0, 0);
+      const start = new Date(formData.date);
+      if (formData.time) {
+        start.setHours(formData.time.getHours(), formData.time.getMinutes(), 0, 0);
+      }
+      // End earlier than the start (e.g. 02:00 after a 22:00 start) means it ends the next day
+      if (end.getTime() <= start.getTime()) end.setDate(end.getDate() + 1);
+      return toLocalISOString(end);
+    }
+    return undefined;
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) return;
     setShowPublishModal(true);
@@ -324,10 +353,7 @@ export default function CreateEvent() {
       
       const fullDate = toLocalISOString(formData.date, formData.time || undefined);
 
-      let endDateStr: string | undefined;
-      if (formData.durationType === 'multi' && formData.endDate) {
-        endDateStr = toDateOnlyISOString(formData.endDate);
-      }
+      const endDateStr = buildEndDateStr();
 
       let finalImageUrl = formData.imageUrl || '';
       if (formData.imageUri) {
@@ -402,10 +428,7 @@ export default function CreateEvent() {
       
       const fullDateP = toLocalISOString(formData.date, formData.time || undefined);
 
-      let endDateStrP: string | undefined;
-      if (formData.durationType === 'multi' && formData.endDate) {
-        endDateStrP = toDateOnlyISOString(formData.endDate);
-      }
+      const endDateStrP = buildEndDateStr();
 
       let finalImageUrlP = formData.imageUrl || '';
       if (formData.imageUri) {
@@ -669,10 +692,12 @@ export default function CreateEvent() {
                   date={formData.date}
                   endDate={formData.endDate}
                   time={formData.time}
+                  endTime={formData.endTime}
                   durationType={formData.durationType}
                   onDateChange={(date) => updateFormData('date', date)}
                   onEndDateChange={(endDate) => setFormData(prev => ({ ...prev, endDate: endDate ?? undefined }))}
                   onTimeChange={(time) => updateFormData('time', time)}
+                  onEndTimeChange={(endTime) => setFormData(prev => ({ ...prev, endTime: endTime ?? undefined }))}
                   onDurationTypeChange={(type) => setFormData(prev => ({ ...prev, durationType: type }))}
                 />
               )}

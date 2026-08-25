@@ -8,22 +8,19 @@ import {
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import {
-  TrendingUp,
   Users,
   DollarSign,
   Calendar,
-  Eye,
-  Heart,
-  Share2,
   BarChart3,
-  ArrowLeft,
+  Percent,
+  Wallet,
 } from 'lucide-react-native';
 import { useUser } from '@/hooks/user-context';
-import { Event } from '@/types/event';
 import { api } from '@/lib/api';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
 import BackButton from '@/components/BackButton';
+import { COMMISSION_TIERS_DESCRIPTION } from '@/utils/commission';
 
 export default function Analytics() {
   const { user } = useUser();
@@ -33,38 +30,21 @@ export default function Analytics() {
     { enabled: !!user?.id && user?.userType === 'promoter' }
   );
   const promoterId = profileByUser?.id ?? null;
-  const { data: eventsData, isLoading, error, refetch } = api.events.list.useQuery(
-    promoterId ? { promoterId } : (undefined as any),
+
+  const { data: statsData, isLoading, error, refetch } = api.analytics.promoterStats.useQuery(
+    { promoterId: promoterId ?? '' },
     { enabled: !!promoterId }
   );
 
-  const promoterEvents: Event[] = useMemo(() => {
-    if (!eventsData) return [];
-    return eventsData.map((e: any) => ({
-      ...e,
-      date: new Date(e.date),
-      endDate: e.endDate ? new Date(e.endDate) : undefined,
-      venue: typeof e.venue === 'object' && e.venue
-        ? { id: (e.venue as any).id ?? '', name: (e.venue as any).name ?? '', address: (e.venue as any).address ?? '', city: (e.venue as any).city ?? '', capacity: (e.venue as any).capacity ?? 0 }
-        : { id: '', name: '', address: '', city: '', capacity: 0 },
-      promoter: typeof e.promoter === 'object' && e.promoter
-        ? { id: (e.promoter as any).id ?? '', name: (e.promoter as any).name ?? '', image: (e.promoter as any).image ?? '', description: (e.promoter as any).description ?? '', verified: !!(e.promoter as any).verified, followersCount: (e.promoter as any).followersCount ?? 0 }
-        : { id: user?.id ?? '', name: user?.name ?? 'Promotor', image: '', description: '', verified: false, followersCount: 0 },
-    })) as Event[];
-  }, [eventsData, user?.id, user?.name]);
+  const stats = useMemo(() => statsData ?? {
+    totalSold: 0,
+    grossRevenue: 0,
+    totalCommission: 0,
+    netToPromoter: 0,
+    perEvent: [] as any[],
+  }, [statsData]);
 
-  const totalTicketsSold = promoterEvents.reduce((sum: number, event: Event) => {
-    const capacity = event.ticketTypes?.reduce((total: number, ticket: any) => total + (ticket.available ?? 0), 0) ?? 0;
-    return sum + capacity;
-  }, 0);
-
-  const totalRevenue = promoterEvents.reduce((sum: number, event: Event) => {
-    const revenue = (event.ticketTypes ?? []).reduce((total: number, ticket: any) => total + (ticket.available ?? 0) * (ticket.price ?? 0), 0);
-    return sum + revenue;
-  }, 0);
-
-  const totalViews = promoterEvents.length * 500;
-  const totalLikes = promoterEvents.length * 50;
+  const formatCurrency = (value: number) => `€${(value || 0).toFixed(2)}`;
 
   if (user?.userType !== 'promoter') {
     return (
@@ -90,7 +70,7 @@ export default function Analytics() {
   if (promoterId && isLoading) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner message="A carregar analytics..." />
+        <LoadingSpinner message="A carregar estatísticas..." />
       </View>
     );
   }
@@ -106,73 +86,9 @@ export default function Analytics() {
     </View>
   );
 
-  const EventCard = ({ event }: { event: Event }) => {
-    const capacity = event.ticketTypes?.reduce((s: number, t: any) => s + (t.available ?? 0), 0) ?? event.venue?.capacity ?? 0;
-    const soldTickets = 0;
-    const revenue = 0;
-    const views = capacity ? 500 : 1;
-    const percentage = capacity ? Math.round((soldTickets / capacity) * 100) : 0;
-    
-    return (
-      <TouchableOpacity
-        style={styles.eventCard}
-        onPress={() => router.push(`/event-buyers/${event.id}`)}
-      >
-        <View style={styles.eventHeader}>
-          <Text style={styles.eventTitle}>{event.title}</Text>
-          <Text style={styles.eventDate}>{new Date(event.date).toLocaleDateString('pt-PT')}</Text>
-        </View>
-        
-        <View style={styles.eventStats}>
-          <View style={styles.eventStat}>
-            <Users size={16} color="#999" />
-            <Text style={styles.eventStatText}>{soldTickets} vendidos</Text>
-          </View>
-          <View style={styles.eventStat}>
-            <DollarSign size={16} color="#999" />
-            <Text style={styles.eventStatText}>€{revenue.toFixed(2)}</Text>
-          </View>
-          <View style={styles.eventStat}>
-            <Eye size={16} color="#999" />
-            <Text style={styles.eventStatText}>{views} visualizações</Text>
-          </View>
-        </View>
-        
-        <View style={styles.performanceMetrics}>
-          <View style={styles.metricRow}>
-            <Text style={styles.metricLabel}>Taxa de Conversão:</Text>
-            <Text style={styles.metricValue}>{views ? ((soldTickets / views) * 100).toFixed(1) : '0'}%</Text>
-          </View>
-          <View style={styles.metricRow}>
-            <Text style={styles.metricLabel}>Receita por Visualização:</Text>
-            <Text style={styles.metricValue}>€{views ? (revenue / views).toFixed(2) : '0.00'}</Text>
-          </View>
-          <View style={styles.metricRow}>
-            <Text style={styles.metricLabel}>Ticket Médio:</Text>
-            <Text style={styles.metricValue}>€{soldTickets ? (revenue / soldTickets).toFixed(2) : '0.00'}</Text>
-          </View>
-        </View>
-        
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View 
-              style={[
-                styles.progressFill, 
-                { width: `${Math.min(percentage, 100)}%` }
-              ]} 
-            />
-          </View>
-          <Text style={styles.progressText}>
-            {soldTickets}/{capacity} ({percentage}%)
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <View style={styles.container}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           headerShown: true,
           title: 'Estatísticas',
@@ -181,90 +97,114 @@ export default function Analytics() {
           headerLeft: () => (
             <BackButton onPress={() => router.back()} color="#fff" />
           ),
-        }} 
+        }}
       />
-      
+
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Visão Geral</Text>
-          <Text style={styles.subtitle}>Estatísticas dos seus eventos</Text>
+          <Text style={styles.subtitle}>Vendas reais dos seus eventos</Text>
         </View>
 
         <View style={styles.statsGrid}>
           <StatCard
             icon={DollarSign}
-            title="Receita Total"
-            value={`€${totalRevenue.toFixed(2)}`}
-            subtitle="Todos os eventos"
+            title="Receita Bruta"
+            value={formatCurrency(stats.grossRevenue)}
+            subtitle="Valor total dos bilhetes vendidos"
             color="#00C851"
           />
-          
+
+          <StatCard
+            icon={Percent}
+            title="Comissão Lyven"
+            value={formatCurrency(stats.totalCommission)}
+            subtitle="Por bilhete vendido"
+            color="#FF6B6B"
+          />
+
+          <StatCard
+            icon={Wallet}
+            title="Líquido p/ Promotor"
+            value={formatCurrency(stats.netToPromoter)}
+            subtitle="Bruto menos comissão"
+            color="#007AFF"
+          />
+
           <StatCard
             icon={Users}
             title="Bilhetes Vendidos"
-            value={totalTicketsSold.toString()}
+            value={stats.totalSold.toString()}
             subtitle="Total de vendas"
             color="#FF385C"
           />
-          
-          <StatCard
-            icon={Eye}
-            title="Visualizações"
-            value={totalViews.toString()}
-            subtitle="Todos os eventos"
-            color="#007AFF"
-          />
-          
-          <StatCard
-            icon={Heart}
-            title="Curtidas"
-            value={totalLikes.toString()}
-            subtitle="Total de likes"
-            color="#FF6B6B"
-          />
+        </View>
+
+        <View style={styles.commissionNote}>
+          <Percent size={16} color="#FF6B6B" />
+          <Text style={styles.commissionNoteText}>{COMMISSION_TIERS_DESCRIPTION}</Text>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <BarChart3 size={20} color="#fff" />
-            <Text style={styles.sectionTitle}>Performance por Evento</Text>
+            <Text style={styles.sectionTitle}>Vendas por Evento</Text>
           </View>
-          
-          {promoterEvents.length > 0 ? (
-            promoterEvents.map((event: Event) => (
-              <EventCard key={event.id} event={event} />
+
+          {stats.perEvent.length > 0 ? (
+            stats.perEvent.map((event: any) => (
+              <TouchableOpacity
+                key={event.eventId}
+                style={styles.eventCard}
+                onPress={() => router.push(`/event-buyers/${event.eventId}`)}
+              >
+                <View style={styles.eventHeader}>
+                  <Text style={styles.eventTitle}>{event.title}</Text>
+                  <Text style={styles.eventDate}>
+                    {event.date ? new Date(event.date).toLocaleDateString('pt-PT') : ''}
+                  </Text>
+                </View>
+
+                <View style={styles.eventStats}>
+                  <View style={styles.eventStat}>
+                    <Users size={16} color="#999" />
+                    <Text style={styles.eventStatText}>{event.sold} vendidos</Text>
+                  </View>
+                  <View style={styles.eventStat}>
+                    <DollarSign size={16} color="#00C851" />
+                    <Text style={styles.eventStatText}>{formatCurrency(event.gross)}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.performanceMetrics}>
+                  <View style={styles.metricRow}>
+                    <Text style={styles.metricLabel}>Valor dos Bilhetes:</Text>
+                    <Text style={styles.metricValue}>{formatCurrency(event.gross)}</Text>
+                  </View>
+                  <View style={styles.metricRow}>
+                    <Text style={styles.metricLabel}>Comissão Lyven:</Text>
+                    <Text style={[styles.metricValue, styles.commissionValue]}>
+                      -{formatCurrency(event.commission)}
+                    </Text>
+                  </View>
+                  <View style={styles.metricRow}>
+                    <Text style={styles.metricLabel}>Líquido p/ Promotor:</Text>
+                    <Text style={[styles.metricValue, styles.netValue]}>
+                      {formatCurrency(event.net)}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
             ))
           ) : (
             <View style={styles.emptyState}>
               <Calendar size={48} color="#666" />
-              <Text style={styles.emptyText}>Nenhum evento encontrado</Text>
-              <Text style={styles.emptySubtext}>Crie seu primeiro evento para ver as estatísticas</Text>
+              <Text style={styles.emptyText}>Sem vendas registadas</Text>
+              <Text style={styles.emptySubtext}>
+                Os seus eventos aparecerão aqui quando houver bilhetes vendidos
+              </Text>
             </View>
           )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Insights</Text>
-          
-          <View style={styles.insightCard}>
-            <TrendingUp size={20} color="#00C851" />
-            <View style={styles.insightContent}>
-              <Text style={styles.insightTitle}>Taxa de Conversão</Text>
-              <Text style={styles.insightText}>
-                {totalViews > 0 ? `${((totalTicketsSold / totalViews) * 100).toFixed(1)}%` : '0%'} dos visitantes compraram bilhetes
-              </Text>
-            </View>
-          </View>
-          
-          <View style={styles.insightCard}>
-            <Share2 size={20} color="#007AFF" />
-            <View style={styles.insightContent}>
-              <Text style={styles.insightTitle}>Engajamento</Text>
-              <Text style={styles.insightText}>
-                {totalViews > 0 ? `${((totalLikes / totalViews) * 100).toFixed(1)}%` : '0%'} de taxa de curtidas
-              </Text>
-            </View>
-          </View>
         </View>
       </ScrollView>
     </View>
@@ -275,10 +215,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: 8,
   },
   scrollView: {
     flex: 1,
@@ -318,18 +254,37 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     color: '#999',
-    fontSize: 14,
+    fontSize: 13,
     marginLeft: 8,
+    flexShrink: 1,
   },
   statValue: {
     color: '#fff',
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold' as const,
     marginBottom: 4,
   },
   statSubtitle: {
     color: '#666',
+    fontSize: 11,
+  },
+  commissionNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 14,
+    marginHorizontal: 20,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#333',
+    gap: 10,
+  },
+  commissionNoteText: {
+    color: '#999',
     fontSize: 12,
+    flex: 1,
+    lineHeight: 17,
   },
   section: {
     padding: 20,
@@ -384,25 +339,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginLeft: 4,
   },
-  progressContainer: {
-    marginTop: 8,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: '#333',
-    borderRadius: 2,
-    marginBottom: 4,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#FF385C',
-    borderRadius: 2,
-  },
-  progressText: {
-    color: '#999',
-    fontSize: 12,
-    textAlign: 'right',
-  },
   performanceMetrics: {
     marginTop: 12,
     paddingTop: 12,
@@ -424,6 +360,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold' as const,
   },
+  commissionValue: {
+    color: '#FF6B6B',
+  },
+  netValue: {
+    color: '#00C851',
+  },
   emptyState: {
     alignItems: 'center',
     padding: 40,
@@ -439,30 +381,6 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 14,
     textAlign: 'center',
-  },
-  insightCard: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  insightContent: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  insightTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold' as const,
-    marginBottom: 4,
-  },
-  insightText: {
-    color: '#999',
-    fontSize: 14,
   },
   errorText: {
     color: '#FF385C',

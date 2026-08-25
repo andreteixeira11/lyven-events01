@@ -210,6 +210,7 @@ export const api = {
     users: createQueryHook(['analytics', 'users'], analyticsApi.users),
     commissions: createQueryHook(['analytics', 'commissions'], analyticsApi.commissions),
     eventStats: createQueryHook(['analytics', 'eventStats'], analyticsApi.eventStats),
+    promoterStats: createQueryHook(['analytics', 'promoterStats'], analyticsApi.promoterStats),
   },
   adminSettings: {
     get: createQueryHook(['adminSettings', 'get'], adminSettingsApi.get),

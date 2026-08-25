@@ -2301,7 +2301,15 @@ export const analyticsApi = {
       const { count: periodTickets } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).gte('purchase_date', startDateIso);
 
       const { data: ticketRevenue } = await supabase.from('tickets').select('price, quantity');
-      const totalRevenue = (ticketRevenue || []).reduce((sum: number, t: any) => sum + ((t.price || 0) * (t.quantity || 0)), 0);
+      let totalRevenue = 0;
+      let totalCommission = 0;
+      (ticketRevenue || []).forEach((t: any) => {
+        const lineGross = (t.price || 0) * (t.quantity || 0);
+        totalRevenue += lineGross;
+        totalCommission += calculateTicketCommission(t.price || 0) * (t.quantity || 0);
+      });
+      totalRevenue = roundCurrency(totalRevenue);
+      totalCommission = roundCurrency(totalCommission);
 
       const { data: periodTicketRevenue } = await supabase.from('tickets').select('price, quantity').gte('purchase_date', startDateIso);
       const periodRevenue = (periodTicketRevenue || []).reduce((sum: number, t: any) => sum + ((t.price || 0) * (t.quantity || 0)), 0);
@@ -2313,6 +2321,8 @@ export const analyticsApi = {
         totalEvents: totalEvents || 0,
         totalTickets: totalTickets || 0,
         totalRevenue,
+        totalCommission,
+        netToPromoters: roundCurrency(totalRevenue - totalCommission),
         pendingEvents: pendingEvents || 0,
         pendingPromoters: pendingPromoters || 0,
         activeAds: activeAds || 0,
@@ -2321,7 +2331,7 @@ export const analyticsApi = {
         period,
       };
     } catch {
-      return { totalUsers: 0, totalEvents: 0, totalTickets: 0, totalRevenue: 0, pendingEvents: 0, pendingPromoters: 0, activeAds: 0, periodTickets: 0, periodRevenue: 0, period: input?.period || 'month' };
+      return { totalUsers: 0, totalEvents: 0, totalTickets: 0, totalRevenue: 0, totalCommission: 0, netToPromoters: 0, pendingEvents: 0, pendingPromoters: 0, activeAds: 0, periodTickets: 0, periodRevenue: 0, period: input?.period || 'month' };
     }
   },
 
@@ -2461,6 +2471,77 @@ export const analyticsApi = {
       };
     } catch (err) {
       console.error('[analyticsApi.eventStats] error:', err);
+      return empty;
+    }
+  },
+
+  /**
+   * Aggregated real sales stats across ALL events of one promoter:
+   * gross revenue (valor comprado), Lyven commission and net to promoter,
+   * plus a per-event breakdown.
+   */
+  promoterStats: async (input: { promoterId: string }): Promise<any> => {
+    const empty = {
+      totalSold: 0, grossRevenue: 0, totalCommission: 0, netToPromoter: 0,
+      perEvent: [] as any[],
+    };
+    try {
+      if (!input?.promoterId) return empty;
+
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('id, event_id, ticket_type_id, quantity, price, purchase_date, events(id, title, date, promoter_id)');
+
+      if (error) {
+        console.error('[analyticsApi.promoterStats] Supabase error:', error.message);
+        return empty;
+      }
+
+      const perEvent = new Map<string, { eventId: string; title: string; date: string; sold: number; gross: number; commission: number }>();
+      let totalSold = 0;
+      let grossRevenue = 0;
+      let totalCommission = 0;
+
+      (data || []).forEach((t: any) => {
+        const event = t.events;
+        if (!event || event.promoter_id !== input.promoterId) return;
+        const quantity = t.quantity || 0;
+        const unitPrice = t.price || 0;
+        const lineGross = unitPrice * quantity;
+        const lineCommission = calculateTicketCommission(unitPrice) * quantity;
+
+        totalSold += quantity;
+        grossRevenue += lineGross;
+        totalCommission += lineCommission;
+
+        if (!perEvent.has(event.id)) {
+          perEvent.set(event.id, {
+            eventId: event.id,
+            title: event.title || 'Evento',
+            date: event.date,
+            sold: 0, gross: 0, commission: 0,
+          });
+        }
+        const es = perEvent.get(event.id)!;
+        es.sold += quantity;
+        es.gross += lineGross;
+        es.commission += lineCommission;
+      });
+
+      return {
+        totalSold,
+        grossRevenue: roundCurrency(grossRevenue),
+        totalCommission: roundCurrency(totalCommission),
+        netToPromoter: roundCurrency(grossRevenue - totalCommission),
+        perEvent: Array.from(perEvent.values()).map((es) => ({
+          ...es,
+          gross: roundCurrency(es.gross),
+          commission: roundCurrency(es.commission),
+          net: roundCurrency(es.gross - es.commission),
+        })).sort((a, b) => b.gross - a.gross),
+      };
+    } catch (err) {
+      console.error('[analyticsApi.promoterStats] error:', err);
       return empty;
     }
   },

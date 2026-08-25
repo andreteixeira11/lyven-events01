@@ -36,7 +36,7 @@ export default function AdminAnalytics() {
   const { data: rawEvents = [] } = api.events.list.useQuery();
   const { data: commissionData, isLoading: commissionLoading } = api.analytics.commissions.useQuery({ period: selectedPeriod });
 
-  const stats = useMemo(() => dashboardData || { totalUsers: 0, totalEvents: 0, totalTickets: 0, totalRevenue: 0, periodTickets: 0, periodRevenue: 0, pendingEvents: 0, pendingPromoters: 0, activeAds: 0 }, [dashboardData]);
+  const stats = useMemo(() => dashboardData || { totalUsers: 0, totalEvents: 0, totalTickets: 0, totalRevenue: 0, totalCommission: 0, netToPromoters: 0, periodTickets: 0, periodRevenue: 0, pendingEvents: 0, pendingPromoters: 0, activeAds: 0 }, [dashboardData]);
 
   const commission = useMemo(() => commissionData || {
     totalCommission: 0, totalVolume: 0,
@@ -148,7 +148,9 @@ export default function AdminAnalytics() {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Visão Geral da Plataforma</Text>
                 <View style={styles.statsGrid}>
-                  <StatCard title="Receita Total" value={formatCurrency(stats.totalRevenue)} icon={DollarSign} color={COLORS.success} />
+                  <StatCard title="Receita Bruta" value={formatCurrency(stats.totalRevenue)} icon={DollarSign} color={COLORS.success} />
+                  <StatCard title="Comissão Lyven" value={formatCurrency(stats.totalCommission || 0)} icon={Percent} color={COLORS.error} />
+                  <StatCard title="Líquido p/ Promotores" value={formatCurrency(stats.netToPromoters || 0)} icon={TrendingUp} color={COLORS.primary} />
                   <StatCard title="Bilhetes Vendidos" value={(stats.totalTickets || 0).toLocaleString()} icon={Target} color={COLORS.primary} />
                   <StatCard title="Total de Eventos" value={stats.totalEvents} icon={Calendar} color={COLORS.warning} />
                   <StatCard title="Total Utilizadores" value={(stats.totalUsers || 0).toLocaleString()} icon={Users} color={COLORS.info} />
