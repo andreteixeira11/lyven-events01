@@ -435,13 +435,13 @@ function IndexContent() {
             {stats.pendingApprovals > 0 && (
               <TouchableOpacity 
                 style={[styles.alertCard, { backgroundColor: colors.warning + '10', borderColor: colors.warning + '30' }]}
-                onPress={() => router.push('/(tabs)/tickets')}
+                onPress={() => router.push('/admin-approvals')}
               >
                 <AlertCircle size={24} color={colors.warning} />
                 <View style={styles.alertContent}>
                   <Text style={[styles.alertTitle, { color: colors.warning }]}>{t('admin.pendingApprovals')}</Text>
                   <Text style={[styles.alertText, { color: colors.textSecondary }]}>
-                    {stats.pendingApprovals} {t('admin.pendingAds')}
+                    {stats.pendingApprovals} {stats.pendingApprovals === 1 ? 'item para aprovar' : 'itens para aprovar'}
                   </Text>
                 </View>
               </TouchableOpacity>

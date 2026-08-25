@@ -24,6 +24,7 @@ export function mapDbEventToEvent(dbEvent: DbEvent, promoter?: DbPromoter | null
   return {
     id: dbEvent.id,
     title: dbEvent.title,
+    status: (dbEvent.status || 'pending') as Event['status'],
     artists,
     venue: {
       id: `venue_${dbEvent.id}`,

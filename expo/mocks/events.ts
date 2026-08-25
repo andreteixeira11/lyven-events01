@@ -128,6 +128,7 @@ export const mockEventStatistics: EventStatistics[] = [
 export const mockEvents: Event[] = [
   {
     id: 'demo-1',
+    status: 'published' as const,
     title: 'Arctic Monkeys',
     date: new Date('2025-11-15T21:00:00'),
     category: 'music',
@@ -157,6 +158,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: 'demo-2',
+    status: 'published' as const,
     title: 'Festival NOS Alive 2025',
     date: new Date('2025-12-10T16:00:00'),
     category: 'festival',
@@ -186,6 +188,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: 'demo-3',
+    status: 'published' as const,
     title: 'Concerto na MEO Arena',
     date: new Date('2026-01-20T20:00:00'),
     category: 'music',
@@ -215,6 +218,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: '1',
+    status: 'published' as const,
     title: 'Arctic Monkeys',
     artists: [
       {
@@ -277,6 +281,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: '2',
+    status: 'published' as const,
     title: 'Festival NOS Alive 2025',
     artists: [
       {
@@ -352,6 +357,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: '3',
+    status: 'published' as const,
     title: 'O Fantasma da Ópera',
     artists: [
       {
@@ -410,6 +416,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: '4',
+    status: 'published' as const,
     title: 'Stand-up Comedy Night',
     artists: [
       {
@@ -460,6 +467,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: '5',
+    status: 'published' as const,
     title: 'Ballet Nacional - O Lago dos Cisnes',
     artists: [
       {
@@ -518,6 +526,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: '6',
+    status: 'published' as const,
     title: 'Sam Smith - Gloria Tour',
     artists: [
       {

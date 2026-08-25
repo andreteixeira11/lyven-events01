@@ -24,9 +24,13 @@ export interface TicketType {
   active?: boolean;
 }
 
+export type EventStatus = 'pending' | 'published' | 'rejected' | 'cancelled';
+
 export interface Event {
   id: string;
   title: string;
+  /** Lifecycle status — pending events await admin approval before being visible */
+  status: EventStatus;
   artists: Artist[];
   venue: Venue;
   date: Date;

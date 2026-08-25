@@ -61,6 +61,7 @@ function mapDbEventToEvent(row: any): Event {
   return {
     id: row.id,
     title: row.title,
+    status: (row.status || 'pending') as Event['status'],
     artists: safeArray(row.artists),
     venue: {
       id: `venue-${row.id}`,
@@ -441,7 +442,11 @@ export const eventsApi = {
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (error || !data) return [];
+      if (error) {
+        console.error('[eventsApi.listPending] Supabase error:', error.message);
+        return [];
+      }
+      if (!data) return [];
 
       return data.map((row: any) => ({
         id: row.id,
