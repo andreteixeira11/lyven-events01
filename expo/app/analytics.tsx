@@ -9,7 +9,6 @@ import {
 import { Stack, router } from 'expo-router';
 import {
   Users,
-  DollarSign,
   Calendar,
   BarChart3,
   Percent,
@@ -75,10 +74,14 @@ export default function Analytics() {
     );
   }
 
-  const StatCard = ({ icon: Icon, title, value, subtitle, color = '#fff' }: any) => (
+  const currencyIcon = (color: string): React.ReactNode => (
+    <Text style={{ fontSize: 22, fontWeight: '700' as const, lineHeight: 27, color }}>{'€'}</Text>
+  );
+
+  const StatCard = ({ icon, title, value, subtitle }: { icon: React.ReactNode; title: string; value: string; subtitle?: string }) => (
     <View style={styles.statCard}>
       <View style={styles.statHeader}>
-        <Icon size={24} color={color} />
+        {icon}
         <Text style={styles.statTitle}>{title}</Text>
       </View>
       <Text style={styles.statValue}>{value}</Text>
@@ -108,35 +111,31 @@ export default function Analytics() {
 
         <View style={styles.statsGrid}>
           <StatCard
-            icon={DollarSign}
+            icon={currencyIcon('#00C851')}
             title="Receita Bruta"
             value={formatCurrency(stats.grossRevenue)}
             subtitle="Valor total dos bilhetes vendidos"
-            color="#00C851"
           />
 
           <StatCard
-            icon={Percent}
+            icon={<Percent size={24} color="#FF6B6B" />}
             title="Comissão Lyven"
             value={formatCurrency(stats.totalCommission)}
-            subtitle="Por bilhete vendido"
-            color="#FF6B6B"
+            subtitle="Bruto menos líquido do promotor"
           />
 
           <StatCard
-            icon={Wallet}
+            icon={<Wallet size={24} color="#007AFF" />}
             title="Líquido p/ Promotor"
             value={formatCurrency(stats.netToPromoter)}
-            subtitle="Bruto menos comissão"
-            color="#007AFF"
+            subtitle="Valor dos bilhetes que fica no promotor"
           />
 
           <StatCard
-            icon={Users}
+            icon={<Users size={24} color="#FF385C" />}
             title="Bilhetes Vendidos"
             value={stats.totalSold.toString()}
             subtitle="Total de vendas"
-            color="#FF385C"
           />
         </View>
 
@@ -171,7 +170,7 @@ export default function Analytics() {
                     <Text style={styles.eventStatText}>{event.sold} vendidos</Text>
                   </View>
                   <View style={styles.eventStat}>
-                    <DollarSign size={16} color="#00C851" />
+                    <Text style={{ fontSize: 15, fontWeight: '700' as const, color: '#00C851', lineHeight: 19 }}>{'€'}</Text>
                     <Text style={styles.eventStatText}>{formatCurrency(event.gross)}</Text>
                   </View>
                 </View>

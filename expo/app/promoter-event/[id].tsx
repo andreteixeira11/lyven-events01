@@ -20,7 +20,6 @@ import {
   Search,
   CheckCircle,
   XCircle,
-  DollarSign,
   TrendingUp,
   Download,
   ChevronRight,
@@ -664,9 +663,10 @@ export default function PromoterEventScreen() {
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.statsGrid}>
             <View style={styles.largeStatCard}>
-              <DollarSign size={20} color="#00C851" />
+              <Text style={{ fontSize: 20, fontWeight: '700' as const, color: '#00C851', lineHeight: 24 }}>{'€'}</Text>
               <Text style={styles.largeStatValue}>{formatCurrency(totalRevenue)}</Text>
-              <Text style={styles.largeStatLabel}>Receita Total</Text>
+              <Text style={styles.largeStatLabel}>Receita Bruta</Text>
+              <Text style={styles.subStatText}>comissão de {formatCurrency(eventStats?.totalCommission ?? 0)} incluída</Text>
             </View>
             
             <View style={styles.largeStatCard}>
@@ -701,6 +701,7 @@ export default function PromoterEventScreen() {
                   </View>
                   <View style={styles.typeBreakdownRight}>
                     <Text style={styles.typeBreakdownValue}>{formatCurrency(tt.revenue)}</Text>
+                    <Text style={styles.typeBreakdownSub}>líquido {formatCurrency(Math.max(0, tt.revenue - tt.commission))}</Text>
                     <Text style={styles.typeBreakdownSub}>comissão {formatCurrency(tt.commission)}</Text>
                   </View>
                 </View>

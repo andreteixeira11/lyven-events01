@@ -12,7 +12,6 @@ import {
 import {
   TrendingUp,
   Users,
-  Euro,
   Plus,
   Ticket,
   Calendar,
@@ -127,6 +126,10 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
 
   const surfaceBg = isDark ? colors.cardElevated : '#f8f9fa';
 
+  const currencyIcon = (color: string): React.ReactNode => (
+    <Text style={{ fontSize: 19, fontWeight: '700' as const, lineHeight: 24, color }}>{'€'}</Text>
+  );
+
   const renderStatCard = (title: string, value: string, icon: React.ReactNode, onPress?: () => void) => (
     <TouchableOpacity
       style={[styles.statCard, { backgroundColor: colors.card, shadowColor: isDark ? '#000' : '#000' }]}
@@ -176,7 +179,7 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
           {renderStatCard(
             'Receita Bruta',
             formatCurrency(revenue.grossRevenue),
-            <Euro size={20} color={colors.success ?? colors.primary} />,
+            currencyIcon(colors.success ?? colors.primary),
             () => router.push('/analytics')
           )}
           {renderStatCard(
@@ -257,7 +260,7 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
                 </View>
                 <View style={[styles.adsStat, { backgroundColor: surfaceBg }]}>
                   <View style={styles.adsStatIconContainer}>
-                    <Euro size={22} color={colors.primary} />
+                    {currencyIcon(colors.primary)}
                   </View>
                   <Text style={[styles.adsStatValue, { color: colors.text }]}>{formatCurrency(totalAdSpend)}</Text>
                   <Text style={[styles.adsStatLabel, { color: colors.textSecondary }]}>Investido</Text>
