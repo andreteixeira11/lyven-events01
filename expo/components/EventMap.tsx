@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Dimensions,
   Platform,
   Alert,
@@ -14,6 +13,7 @@ import { MapPin, Calendar, Euro, Star, Filter } from 'lucide-react-native';
 import { MapEvent, Event } from '@/types/event';
 import { mockEvents } from '@/mocks/events';
 import { router } from 'expo-router';
+import { EventImage } from '@/components/EventImage';
 
 interface EventMapProps {
   events?: Event[];
@@ -132,7 +132,7 @@ const EventMap: React.FC<EventMapProps> = ({
                 onPress={() => handleEventPress(event)}
                 activeOpacity={0.8}
               >
-                <Image source={{ uri: event.image }} style={styles.eventImage} />
+                <EventImage uri={event.image} style={styles.eventImage} />
                 <View style={styles.eventInfo}>
                   <Text style={styles.eventTitle} numberOfLines={1}>
                     {event.title}
@@ -169,8 +169,8 @@ const EventMap: React.FC<EventMapProps> = ({
 
         {selectedEvent && (
           <View style={styles.selectedEventCard}>
-            <Image 
-              source={{ uri: selectedEvent.image }} 
+            <EventImage 
+              uri={selectedEvent.image} 
               style={styles.selectedEventImage} 
             />
             <View style={styles.selectedEventInfo}>
@@ -267,7 +267,7 @@ const EventMap: React.FC<EventMapProps> = ({
               }}
               activeOpacity={0.8}
             >
-              <Image source={{ uri: event.image }} style={styles.mobileEventImage} />
+              <EventImage uri={event.image} style={styles.mobileEventImage} />
               <View style={styles.mobileEventInfo}>
                 <Text style={styles.mobileEventTitle} numberOfLines={1}>
                   {event.title}

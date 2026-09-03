@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View, ScrollView, Image, TouchableOpacity, SafeAreaView, Platform, Alert, ActionSheetIOS } from "react-native";
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, Platform, Alert, ActionSheetIOS } from "react-native";
+import { EventImage } from "@/components/EventImage";
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import { Calendar, MapPin, ChevronLeft, Share2, Heart, Bell, Clock, Instagram, Facebook, Globe, UserPlus } from "lucide-react-native";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -464,7 +465,7 @@ export default function EventDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
         {/* Hero Image */}
         <View style={styles.heroContainer}>
-          <Image source={{ uri: event.image }} style={styles.heroImage} />
+          <EventImage uri={event.image} style={styles.heroImage} />
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.8)']}
             style={styles.heroGradient}

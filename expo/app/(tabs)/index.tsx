@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +18,7 @@ import { router } from 'expo-router';
 import { Event, Advertisement } from '@/types/event';
 import { api } from '@/lib/api';
 import { FreeBadge, isFreeEvent } from '@/components/FreeBadge';
+import { EventImage } from '@/components/EventImage';
 import { handleError, isRetryableError } from '@/lib/error-handler';
 import { ErrorState, EventListSkeleton } from '@/components/LoadingStates';
 import { RefreshControl } from 'react-native';
@@ -165,7 +165,7 @@ function NormalUserExploreContent() {
       onPress={() => router.push(`/event/${event.id}` as any)}
       activeOpacity={0.9}
     >
-      <Image source={{ uri: event.image }} style={styles.heroCardImage} />
+      <EventImage uri={event.image} style={styles.heroCardImage} />
       {isFreeEvent(event) && (
         <View style={styles.heroFreeBadge} pointerEvents="none">
           <FreeBadge size="md" />
@@ -217,7 +217,7 @@ function NormalUserExploreContent() {
         activeOpacity={0.8}
       >
         <View style={styles.eventListImageWrap}>
-          <Image source={{ uri: event.image }} style={styles.eventListImage} />
+          <EventImage uri={event.image} style={styles.eventListImage} />
           {isFreeEvent(event) && (
             <View style={styles.eventListFreeBadge} pointerEvents="none">
               <FreeBadge size="sm" />

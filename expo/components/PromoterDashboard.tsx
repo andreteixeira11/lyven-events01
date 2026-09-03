@@ -20,8 +20,8 @@ import {
   Percent,
   Wallet,
 } from 'lucide-react-native';
-import { Image } from 'react-native';
 import { router } from 'expo-router';
+import { EventImage } from '@/components/EventImage';
 import { useUser } from '@/hooks/user-context';
 import { useTheme } from '@/hooks/theme-context';
 import { api } from '@/lib/api';
@@ -280,7 +280,7 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
             >
               {(nextEvent as any).image ? (
                 <View style={styles.nextEventImageContainer}>
-                  <Image source={{ uri: (nextEvent as any).image }} style={styles.nextEventImage} />
+                  <EventImage uri={(nextEvent as any).image} style={styles.nextEventImage} />
                   <View style={styles.nextEventImageOverlay} />
                 </View>
               ) : null}
