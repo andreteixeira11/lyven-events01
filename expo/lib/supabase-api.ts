@@ -152,6 +152,61 @@ export const eventsApi = {
   create: async (input: any): Promise<any> => {
     try {
       const eventId = input.id || genId('event');
+
+      // events.promoter_id tem FK NOT NULL para promoters(id). Resolve um id
+      // válido: usa o recebido se existir, caso contrário recorre ao perfil de
+      // promotor do utilizador, criando a linha pública em promoters se faltar.
+      let resolvedPromoterId = '';
+      if (input.promoterId && input.promoterId !== 'unknown') {
+        const { data: existingPromoter } = await supabase
+          .from('promoters')
+          .select('id')
+          .eq('id', input.promoterId)
+          .maybeSingle();
+        if (existingPromoter) {
+          resolvedPromoterId = input.promoterId;
+        }
+      }
+      if (!resolvedPromoterId && input.userId) {
+        const { data: profile } = await supabase
+          .from('promoter_profiles')
+          .select('id, company_name')
+          .eq('user_id', input.userId)
+          .order('is_approved', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (profile) {
+          const { data: publicRow } = await supabase
+            .from('promoters')
+            .select('id')
+            .eq('id', profile.id)
+            .maybeSingle();
+          if (publicRow) {
+            resolvedPromoterId = profile.id;
+          } else {
+            const { data: createdPromoter } = await supabase
+              .from('promoters')
+              .insert({
+                id: profile.id,
+                name: profile.company_name || 'Promotor',
+                image: '',
+                description: '',
+                verified: false,
+                followers_count: 0,
+              })
+              .select('id')
+              .single();
+            if (createdPromoter) {
+              resolvedPromoterId = createdPromoter.id;
+              console.log('[eventsApi.create] Auto-created missing promoters row for profile:', profile.id);
+            }
+          }
+        }
+      }
+      if (!resolvedPromoterId) {
+        throw new Error('Perfil de promotor não encontrado. Complete o registo como promotor antes de criar eventos.');
+      }
+
       const { data, error } = await supabase.from('events').insert({
         id: eventId,
         title: input.title,
@@ -172,7 +227,7 @@ export const eventsApi = {
         is_sold_out: input.isSoldOut || false,
         is_featured: input.isFeatured || false,
         duration: input.duration || null,
-        promoter_id: input.promoterId || 'unknown',
+        promoter_id: resolvedPromoterId,
         tags: JSON.stringify(input.tags || []),
         instagram_link: input.instagramLink || null,
         facebook_link: input.facebookLink || null,
@@ -186,11 +241,11 @@ export const eventsApi = {
       if (error) throw error;
 
       try {
-        if (input.promoterId) {
+        if (resolvedPromoterId) {
           const { data: promoterProfile } = await supabase
             .from('promoter_profiles')
             .select('user_id, company_name')
-            .eq('id', input.promoterId)
+            .eq('id', resolvedPromoterId)
             .maybeSingle();
 
           let promoterEmail = '';

@@ -130,7 +130,7 @@ export default function AdminDashboard() {
         id: e.id,
         type: 'event',
         title: e.title || 'Evento',
-        description: e.description || 'Novo evento aguardando aprovação',
+        description: e.description || 'Novo evento criado',
         submittedBy: e.promoter?.name || 'Desconhecido',
         submittedAt: e.createdAt || new Date().toISOString(),
         imageUrl: e.image,

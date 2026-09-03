@@ -387,8 +387,9 @@ export default function CreateEvent() {
           active: t.active !== false,
         })),
         image: finalImageUrl,
-        promoterId: resolvedPromoterId || 'unknown',
-        status: isEditMode ? undefined : 'pending',
+        promoterId: resolvedPromoterId || undefined,
+        userId: user?.id ?? undefined,
+        status: isEditMode ? undefined : 'published',
       };
 
       console.log('📦 Dados do evento:', eventData);
@@ -402,7 +403,7 @@ export default function CreateEvent() {
       
       Alert.alert(
         'Sucesso!',
-        isEditMode ? 'Evento atualizado com sucesso.' : 'Evento publicado com sucesso. Aguardando aprovação.',
+        isEditMode ? 'Evento atualizado com sucesso.' : 'Evento publicado com sucesso.',
         [
           {
             text: 'OK',
@@ -462,8 +463,9 @@ export default function CreateEvent() {
           active: t.active !== false,
         })),
         image: finalImageUrlP,
-        promoterId: resolvedPromoterId || 'unknown',
-        status: isEditMode ? undefined : 'pending',
+        promoterId: resolvedPromoterId || undefined,
+        userId: user?.id ?? undefined,
+        status: isEditMode ? undefined : 'published',
       };
 
       console.log('📦 Dados do evento (promoção):', eventData);
