@@ -53,7 +53,6 @@ function NormalUserExploreContent() {
   const { colors } = useTheme();
   const { t } = useI18n();
   const [refreshing, setRefreshing] = React.useState(false);
-  const [eventFilter, setEventFilter] = React.useState<'upcoming' | 'published'>('upcoming');
 
   const { 
     data: featuredEventsData, 
@@ -140,18 +139,6 @@ function NormalUserExploreContent() {
       .sort((a: Event, b: Event) => a.date.getTime() - b.date.getTime())
       .slice(0, 10);
   }, [allEventsData, isEventLiveOrUpcoming, toEvent]);
-
-  // Aba "Publicados": todos os eventos com status 'published', incluindo os
-  // que já começaram hoje ou têm data passada — garante que os promotores
-  // veem sempre os seus eventos ativos.
-  const publishedEvents: Event[] = React.useMemo(() => {
-    if (!allEventsData) return [];
-    return allEventsData
-      .map(toEvent)
-      .sort((a: Event, b: Event) => a.date.getTime() - b.date.getTime());
-  }, [allEventsData, toEvent]);
-
-  const filteredEvents = eventFilter === 'published' ? publishedEvents : upcomingEvents;
 
   const isLoading = isLoadingFeatured || isLoadingEvents;
   const error = featuredError || eventsError;
@@ -246,11 +233,6 @@ function NormalUserExploreContent() {
             <Text style={[styles.eventListText, { color: colors.textSecondary }]}>
               {new Date(event.date).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })}
             </Text>
-            {!isEventLiveOrUpcoming(event) && (
-              <Text style={[styles.eventListEndedText, { color: colors.textSecondary }]}>
-                {'· Terminado'}
-              </Text>
-            )}
           </View>
           <View style={styles.eventListInfo}>
             <MapPin size={13} color={colors.primary} />
@@ -365,56 +347,23 @@ function NormalUserExploreContent() {
 
           <View style={styles.exploreSection}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.exploreSectionTitle, { color: colors.text }]}>
-                {eventFilter === 'published' ? 'Publicados' : t('events.upcoming')}
-              </Text>
+              <Text style={[styles.exploreSectionTitle, { color: colors.text }]}>{t('events.upcoming')}</Text>
               <TouchableOpacity onPress={() => router.push('/(tabs)/search' as any)}>
                 <Text style={[styles.seeAllText, { color: colors.primary }]}>Ver todos</Text>
               </TouchableOpacity>
             </View>
-
-            <View style={styles.filterTabs}>
-              {([['upcoming', 'Próximos'], ['published', 'Publicados']] as const).map(([key, label]) => {
-                const isActive = eventFilter === key;
-                return (
-                  <TouchableOpacity
-                    key={key}
-                    style={[
-                      styles.filterTab,
-                      isActive
-                        ? { backgroundColor: colors.primary, borderColor: colors.primary }
-                        : { backgroundColor: colors.card, borderColor: colors.border },
-                    ]}
-                    onPress={() => setEventFilter(key)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.filterTabText,
-                        { color: isActive ? '#FFFFFF' : colors.textSecondary },
-                      ]}
-                    >
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {filteredEvents.length > 0 ? (
-              filteredEvents.map((event: Event) => (
-                <EventListCard key={`${eventFilter}-${event.id}`} event={event} />
+            {upcomingEvents.length > 0 ? (
+              upcomingEvents.map((event: Event) => (
+                <EventListCard key={`upcoming-${event.id}`} event={event} />
               ))
             ) : (
               <View style={[styles.emptyState, { backgroundColor: colors.card }]}>
                 <Calendar size={40} color={colors.textSecondary} />
                 <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-                  {eventFilter === 'published' ? 'Nenhum evento publicado' : 'Nenhum evento próximo'}
+                  Nenhum evento próximo
                 </Text>
                 <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
-                  {eventFilter === 'published'
-                    ? 'Os eventos publicados pelos promotores aparecem aqui'
-                    : 'Novos eventos serão adicionados em breve'}
+                  Novos eventos serão adicionados em breve
                 </Text>
               </View>
             )}
@@ -620,25 +569,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold' as const,
     marginBottom: 15,
-  },
-  filterTabs: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 15,
-  },
-  filterTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  filterTabText: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-  },
-  eventListEndedText: {
-    fontSize: 12,
-    marginLeft: 4,
   },
   statsGrid: {
     gap: 15,
