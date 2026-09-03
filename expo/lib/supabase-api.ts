@@ -2840,21 +2840,72 @@ export const adminSettingsApi = {
   },
 };
 
+export interface StripeCheckoutItem {
+  eventId: string;
+  ticketTypeId: string;
+  quantity: number;
+  seatLabels?: string[];
+}
+
+export interface StripeCreateCheckoutInput {
+  items: StripeCheckoutItem[];
+  userId: string;
+  userEmail: string;
+  paymentMethod: 'card' | 'mbway' | 'multibanco';
+  returnUrl: string;
+  cancelUrl: string;
+}
+
+function stripeError(err: any): Error {
+  // supabase.functions.invoke devolve FunctionsHttpError; extrai a mensagem do corpo.
+  const ctx = err?.context;
+  if (ctx && typeof ctx.json === 'function') {
+    // o corpo já foi consumido em alguns clientes — ignora falhas
+  }
+  return new Error(err?.message ?? 'Erro de comunicação com o Stripe');
+}
+
 export const stripeApi = {
   getConfig: async (): Promise<{ isConfigured: boolean; publishableKey: string | null }> => {
-    return { isConfigured: false, publishableKey: null };
+    try {
+      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+        body: { action: 'ping' },
+      });
+      if (error) return { isConfigured: false, publishableKey: null };
+      return {
+        isConfigured: !!data?.configured,
+        publishableKey: data?.publishableKey ?? null,
+      };
+    } catch {
+      return { isConfigured: false, publishableKey: null };
+    }
   },
 
-  createCheckout: async (_input: any): Promise<any> => {
-    throw new Error('Stripe checkout requires server-side configuration via Supabase Edge Functions');
+  /** Cria uma sessão Stripe Checkout e devolve o URL da página de pagamento. */
+  createCheckout: async (input: StripeCreateCheckoutInput): Promise<{ sessionId: string; url: string }> => {
+    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+      body: { action: 'create', ...input },
+    });
+    if (error) throw stripeError(error);
+    if (data?.error) throw new Error(data.error);
+    if (!data?.url || !data?.sessionId) throw new Error('Resposta inválida do servidor de pagamentos');
+    return { sessionId: data.sessionId, url: data.url };
   },
 
-  createPaymentIntent: async (_input: any): Promise<any> => {
-    throw new Error('Stripe payment intent requires server-side configuration via Supabase Edge Functions');
-  },
-
-  getSession: async (_input: { sessionId: string }): Promise<any> => {
-    return null;
+  /** Consulta o estado de pagamento de uma sessão (usado após regressar do Stripe). */
+  getStatus: async (input: { sessionId: string }): Promise<{
+    paid: boolean;
+    paymentStatus: string;
+    amountTotal: number;
+    currency: string;
+    email: string | null;
+  }> => {
+    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+      body: { action: 'status', sessionId: input.sessionId },
+    });
+    if (error) throw stripeError(error);
+    if (data?.error) throw new Error(data.error);
+    return data;
   },
 };
 

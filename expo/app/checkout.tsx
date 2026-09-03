@@ -1,7 +1,9 @@
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, TextInput, Modal, Platform, Animated, Image, KeyboardAvoidingView } from "react-native";
 import { useCart } from "@/hooks/cart-context";
-import { router, Stack } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { api } from "@/lib/api";
+import { stripeApi } from "@/lib/supabase-api";
+import * as WebBrowser from 'expo-web-browser';
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { LoadingSpinner, ErrorState } from "@/components/LoadingStates";
 import { handleError } from "@/lib/error-handler";
@@ -19,24 +21,20 @@ type PaymentMethod = 'card' | 'mbway' | 'multibanco';
 type CheckoutStep = 'review' | 'payment' | 'confirm';
 
 export default function CheckoutScreen() {
-  const { cartItems, getTotalPrice, completePurchase, removeFromCart, updateQuantity } = useCart();
+  const { cartItems, getTotalPrice, clearCart, removeFromCart, updateQuantity } = useCart();
   const { user } = useUser();
   const { colors } = useTheme();
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('review');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('card');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showMultibancoModal, setShowMultibancoModal] = useState(false);
   const [showLoginSheet, setShowLoginSheet] = useState(false);
-  
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-  const [mbwayPhone, setMbwayPhone] = useState('');
-  const [multibancoEntity, setMultibancoEntity] = useState('');
-  const [multibancoReference, setMultibancoReference] = useState('');
+
+  // Regresso do Stripe na web: ?session_id=... na própria página.
+  const params = useLocalSearchParams<{ session_id?: string; stripe_cancel?: string }>();
+  const webReturnHandledRef = useRef(false);
 
   const progressAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -56,65 +54,6 @@ export default function CheckoutScreen() {
   const animateStepChange = useCallback((newStep: CheckoutStep) => {
     setCurrentStep(newStep);
   }, []);
-
-  const formatCardNumber = (text: string) => {
-    const cleaned = text.replace(/\s/g, '');
-    const formatted = cleaned.match(/.{1,4}/g)?.join(' ') || cleaned;
-    return formatted;
-  };
-
-  const formatExpiry = (text: string) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length >= 2) {
-      let month = parseInt(cleaned.slice(0, 2), 10);
-      if (month > 12) month = 12;
-      if (month < 1 && cleaned.slice(0, 2) !== '0' && cleaned.length >= 2) month = 1;
-      const monthStr = month.toString().padStart(2, '0');
-      if (cleaned.length > 2) {
-        const currentYear = new Date().getFullYear() % 100;
-        let year = parseInt(cleaned.slice(2, 4), 10);
-        if (cleaned.slice(2, 4).length === 2 && year < currentYear) {
-          year = currentYear;
-        }
-        return monthStr + '/' + (cleaned.slice(2, 4).length === 2 ? year.toString().padStart(2, '0') : cleaned.slice(2, 4));
-      }
-      return monthStr + '/';
-    }
-    return cleaned;
-  };
-
-  const validateCard = () => {
-    if (cardNumber.replace(/\s/g, '').length < 13) {
-      Alert.alert('Erro', 'Número de cartão inválido');
-      return false;
-    }
-    if (cardName.length < 3) {
-      Alert.alert('Erro', 'Por favor, insira o nome completo no cartão');
-      return false;
-    }
-    if (cardExpiry.length !== 5) {
-      Alert.alert('Erro', 'Data de validade inválida');
-      return false;
-    }
-    const [monthStr, yearStr] = cardExpiry.split('/');
-    const month = parseInt(monthStr, 10);
-    const year = parseInt(yearStr, 10);
-    const currentYear = new Date().getFullYear() % 100;
-    const currentMonth = new Date().getMonth() + 1;
-    if (month < 1 || month > 12) {
-      Alert.alert('Erro', 'Mês de validade inválido (01-12)');
-      return false;
-    }
-    if (year < currentYear || (year === currentYear && month < currentMonth)) {
-      Alert.alert('Erro', 'Cartão expirado. Verifique a data de validade.');
-      return false;
-    }
-    if (cardCvv.length < 3) {
-      Alert.alert('Erro', 'CVV inválido');
-      return false;
-    }
-    return true;
-  };
 
   const { data: eventsData, isLoading: isLoadingEvents, error: eventsError, refetch: refetchEvents } = api.events.list.useQuery(
     {},
@@ -158,11 +97,6 @@ export default function CheckoutScreen() {
       }
       animateStepChange('payment');
     } else if (currentStep === 'payment') {
-      if (selectedPayment === 'card' && !validateCard()) return;
-      if (selectedPayment === 'mbway' && !mbwayPhone) {
-        Alert.alert('Erro', 'Por favor, insira o seu número de telefone.');
-        return;
-      }
       animateStepChange('confirm');
     }
   };
@@ -179,74 +113,118 @@ export default function CheckoutScreen() {
     }
   };
 
+  const finishPurchase = () => {
+    if (Platform.OS !== 'web') {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    clearCart();
+    void queryClient.invalidateQueries({ queryKey: ['tickets', 'list'] });
+    Animated.spring(successScaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 4,
+    }).start();
+    setShowSuccessModal(true);
+  };
+
+  // Confirma o pagamento junto do servidor (a emissão de bilhetes acontece no
+  // webhook do Stripe, que pode demorar alguns segundos).
+  const verifyPayment = async (sessionId: string): Promise<boolean> => {
+    setIsVerifying(true);
+    try {
+      for (let attempt = 0; attempt < 10; attempt++) {
+        try {
+          const status = await stripeApi.getStatus({ sessionId });
+          if (status?.paid) return true;
+        } catch (err) {
+          console.warn('[checkout] Falha ao consultar estado do pagamento:', err);
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      return false;
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   const handlePurchase = async () => {
     if (!user) {
       setShowLoginSheet(true);
       return;
     }
+    if (cartItems.length === 0) return;
 
     setIsProcessing(true);
-    
     if (Platform.OS !== 'web') {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    
+
     try {
-      if (selectedPayment === 'multibanco') {
-        const entity = '12345';
-        const reference = String(Math.floor(100000000 + Math.random() * 900000000));
-        setMultibancoEntity(entity);
-        setMultibancoReference(reference);
-        setShowMultibancoModal(true);
-        setIsProcessing(false);
+      // Nativo: regressa via deep link. Web: regressa a esta página com ?session_id=...
+      const returnUrl = Platform.OS === 'web'
+        ? `${window.location.origin}/checkout`
+        : 'lyven://stripe-return';
+
+      const result = await stripeApi.createCheckout({
+        items: cartItems.map(item => ({
+          eventId: item.eventId,
+          ticketTypeId: item.ticketTypeId,
+          quantity: item.quantity,
+          seatLabels: item.seatLabels,
+        })),
+        userId: user.id,
+        userEmail: user.email ?? '',
+        paymentMethod: selectedPayment,
+        returnUrl,
+        cancelUrl: returnUrl,
+      });
+      setIsProcessing(false);
+
+      if (Platform.OS === 'web') {
+        window.location.href = result.url;
         return;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const browserResult = await WebBrowser.openAuthSessionAsync(result.url, 'lyven://stripe-return');
+      let sessionId = result.sessionId;
+      if (browserResult.type === 'success' && browserResult.url) {
+        const match = browserResult.url.match(/session_id=([^&]+)/);
+        if (match) sessionId = decodeURIComponent(match[1]);
+      }
 
-      const success = await completePurchase(user.id);
-      setIsProcessing(false);
-      
-      if (success) {
-        void queryClient.invalidateQueries({ queryKey: ['tickets', 'list'] });
-        Animated.spring(successScaleAnim, {
-          toValue: 1,
-          useNativeDriver: true,
-          friction: 4,
-        }).start();
-        setShowSuccessModal(true);
+      const paid = await verifyPayment(sessionId);
+      if (paid) {
+        finishPurchase();
       } else {
-        Alert.alert('Erro', 'Não foi possível concluir a compra. Por favor, tente novamente.');
+        Alert.alert(
+          'Pagamento não confirmado',
+          'Ainda não recebemos a confirmação do pagamento. Se já efetuou o pagamento (ex.: referência Multibanco), os bilhetes aparecerão automaticamente em "Os Meus Bilhetes" após a confirmação.'
+        );
       }
     } catch (error) {
       console.error('Erro ao processar pagamento:', error);
       setIsProcessing(false);
-      Alert.alert('Erro', 'Ocorreu um erro ao processar o pagamento. Por favor, tente novamente.');
+      setIsVerifying(false);
+      Alert.alert('Erro', error instanceof Error ? error.message : 'Ocorreu um erro ao iniciar o pagamento. Por favor, tente novamente.');
     }
   };
 
-  const handleMultibancoConfirm = async () => {
-    if (!user) return;
-
-    try {
-      const success = await completePurchase(user.id);
-      setShowMultibancoModal(false);
-      
-      if (success) {
-        void queryClient.invalidateQueries({ queryKey: ['tickets', 'list'] });
-        Animated.spring(successScaleAnim, {
-          toValue: 1,
-          useNativeDriver: true,
-          friction: 4,
-        }).start();
-        setShowSuccessModal(true);
-      }
-    } catch (error) {
-      console.error('Erro ao processar pagamento Multibanco:', error);
-      setShowMultibancoModal(false);
-      Alert.alert('Erro', 'Ocorreu um erro ao processar o pagamento.');
+  // Regresso do Stripe na web: confirma automaticamente a compra.
+  useEffect(() => {
+    if (
+      Platform.OS === 'web' &&
+      typeof params.session_id === 'string' &&
+      params.session_id &&
+      !webReturnHandledRef.current
+    ) {
+      webReturnHandledRef.current = true;
+      verifyPayment(params.session_id).then(paid => {
+        if (paid) {
+          finishPurchase();
+        }
+      });
     }
-  };
+  }, [params.session_id]);
 
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
@@ -546,64 +524,21 @@ export default function CheckoutScreen() {
 
       {selectedPayment === 'card' && (
         <View style={[styles.paymentForm, { backgroundColor: colors.card }, SHADOWS.sm]}>
-          <Text style={[styles.formTitle, { color: colors.text }]}>Dados do Cartão</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-            placeholder="Número do Cartão"
-            placeholderTextColor={colors.textSecondary}
-            value={cardNumber}
-            onChangeText={(text) => setCardNumber(formatCardNumber(text))}
-            keyboardType="numeric"
-            maxLength={19}
-          />
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-            placeholder="Nome no Cartão"
-            placeholderTextColor={colors.textSecondary}
-            value={cardName}
-            onChangeText={setCardName}
-            autoCapitalize="characters"
-          />
-          <View style={styles.inputRow}>
-            <TextInput
-              style={[styles.input, styles.inputHalf, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-              placeholder="MM/AA"
-              placeholderTextColor={colors.textSecondary}
-              value={cardExpiry}
-              onChangeText={(text) => setCardExpiry(formatExpiry(text))}
-              keyboardType="numeric"
-              maxLength={5}
-            />
-            <TextInput
-              style={[styles.input, styles.inputHalf, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-              placeholder="CVV"
-              placeholderTextColor={colors.textSecondary}
-              value={cardCvv}
-              onChangeText={setCardCvv}
-              keyboardType="numeric"
-              maxLength={4}
-              secureTextEntry
-            />
+          <View style={styles.infoBox}>
+            <Lock size={16} color={colors.primary} />
+            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+              Será aberta uma página de pagamento segura do Stripe para inserir os dados do cartão. Aceitamos Visa, Mastercard, Apple Pay e Google Pay.
+            </Text>
           </View>
         </View>
       )}
 
       {selectedPayment === 'mbway' && (
         <View style={[styles.paymentForm, { backgroundColor: colors.card }, SHADOWS.sm]}>
-          <Text style={[styles.formTitle, { color: colors.text }]}>Número MB WAY</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-            placeholder="Número de Telemóvel"
-            placeholderTextColor={colors.textSecondary}
-            value={mbwayPhone}
-            onChangeText={setMbwayPhone}
-            keyboardType="phone-pad"
-            maxLength={9}
-          />
           <View style={styles.infoBox}>
             <Phone size={16} color={colors.primary} />
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              Receberá uma notificação no seu telemóvel para confirmar o pagamento.
+              Será aberta uma página segura do Stripe onde insere o seu número de telemóvel e confirma o pagamento na app MB WAY.
             </Text>
           </View>
         </View>
@@ -614,7 +549,7 @@ export default function CheckoutScreen() {
           <View style={styles.infoBox}>
             <Building2 size={16} color={colors.primary} />
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              Será gerada uma referência Multibanco para pagamento. Os bilhetes são disponibilizados após confirmação.
+              Será gerada uma referência Multibanco via Stripe. Pode pagar em qualquer Multibanco ou homebanking — os bilhetes ficam disponíveis automaticamente após o pagamento.
             </Text>
           </View>
         </View>
@@ -705,7 +640,7 @@ export default function CheckoutScreen() {
             <>
               <CreditCard size={20} color={colors.primary} />
               <Text style={[styles.paymentSummaryText, { color: colors.textSecondary }]}>
-                Cartão terminado em {cardNumber.slice(-4) || '****'}
+                Cartão de crédito/débito (via Stripe)
               </Text>
             </>
           )}
@@ -713,7 +648,7 @@ export default function CheckoutScreen() {
             <>
               <Phone size={20} color={colors.primary} />
               <Text style={[styles.paymentSummaryText, { color: colors.textSecondary }]}>
-                MB WAY - {mbwayPhone || '*** *** ***'}
+                MB WAY (via Stripe)
               </Text>
             </>
           )}
@@ -721,7 +656,7 @@ export default function CheckoutScreen() {
             <>
               <Building2 size={20} color={colors.primary} />
               <Text style={[styles.paymentSummaryText, { color: colors.textSecondary }]}>
-                Referência Multibanco
+                Referência Multibanco (via Stripe)
               </Text>
             </>
           )}
@@ -797,13 +732,15 @@ export default function CheckoutScreen() {
             style={[
               styles.footerButton, 
               { backgroundColor: colors.primary },
-              isProcessing && styles.footerButtonDisabled
+              (isProcessing || isVerifying) && styles.footerButtonDisabled
             ]}
             onPress={currentStep === 'confirm' ? handlePurchase : handleNextStep}
-            disabled={isProcessing}
+            disabled={isProcessing || isVerifying}
           >
-            {isProcessing ? (
-              <Text style={[styles.footerButtonText, { color: colors.white }]}>A processar...</Text>
+            {isProcessing || isVerifying ? (
+              <Text style={[styles.footerButtonText, { color: colors.white }]}>
+                {isVerifying ? 'A confirmar pagamento...' : 'A processar...'}
+              </Text>
             ) : (
               <>
                 <Text style={[styles.footerButtonText, { color: colors.white }]}>
@@ -845,54 +782,6 @@ export default function CheckoutScreen() {
               <Text style={[styles.successButtonText, { color: colors.white }]}>Ver Bilhetes</Text>
             </TouchableOpacity>
           </Animated.View>
-        </View>
-      </Modal>
-
-      <Modal visible={showMultibancoModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.multibancoModal, { backgroundColor: colors.card }]}>
-            <TouchableOpacity 
-              style={styles.modalClose}
-              onPress={() => setShowMultibancoModal(false)}
-            >
-              <X size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-
-            <View style={[styles.multibancoIcon, { backgroundColor: colors.primaryLight }]}>
-              <Building2 size={40} color={colors.primary} />
-            </View>
-
-            <Text style={[styles.multibancoTitle, { color: colors.text }]}>Referência Multibanco</Text>
-            <Text style={[styles.multibancoSubtitle, { color: colors.textSecondary }]}>
-              Utilize os dados abaixo para efetuar o pagamento
-            </Text>
-
-            <View style={[styles.referenceBox, { backgroundColor: colors.primaryLight, borderColor: colors.primary }]}>
-              <View style={[styles.referenceRow, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.referenceLabel, { color: colors.textSecondary }]}>Entidade</Text>
-                <Text style={[styles.referenceValue, { color: colors.primary }]}>{multibancoEntity}</Text>
-              </View>
-              <View style={[styles.referenceRow, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.referenceLabel, { color: colors.textSecondary }]}>Referência</Text>
-                <Text style={[styles.referenceValue, { color: colors.primary }]}>{multibancoReference}</Text>
-              </View>
-              <View style={styles.referenceRow}>
-                <Text style={[styles.referenceLabel, { color: colors.textSecondary }]}>Montante</Text>
-                <Text style={[styles.referenceValue, { color: colors.primary }]}>€{total.toFixed(2)}</Text>
-              </View>
-            </View>
-
-            <Text style={[styles.multibancoInfo, { color: colors.textSecondary }]}>
-              Esta referência é válida por 24 horas. Os bilhetes serão disponibilizados após confirmação do pagamento.
-            </Text>
-
-            <TouchableOpacity 
-              style={[styles.multibancoButton, { backgroundColor: colors.primary }]}
-              onPress={handleMultibancoConfirm}
-            >
-              <Text style={[styles.multibancoButtonText, { color: colors.white }]}>Entendido</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </Modal>
     </View>

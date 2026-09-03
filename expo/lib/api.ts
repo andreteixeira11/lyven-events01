@@ -174,16 +174,7 @@ export const api = {
   stripe: {
     getConfig: createQueryHook(['stripe', 'getConfig'], stripeApi.getConfig),
     createCheckout: createMutationHook(stripeApi.createCheckout),
-    createPaymentIntent: createMutationHook(stripeApi.createPaymentIntent),
-    getSession: {
-      useQuery: (input?: any, opts?: any) => {
-        return useQuery({
-          queryKey: ['stripe', 'getSession', input],
-          queryFn: () => stripeApi.getSession(input),
-          ...opts,
-        });
-      },
-    },
+    getStatus: createQueryHook(['stripe', 'getStatus'], stripeApi.getStatus),
   },
   emails: {
     sendTest: createMutationHook(emailsApi.sendTest),
@@ -380,8 +371,7 @@ export const apiClient = {
   stripe: {
     getConfig: { query: stripeApi.getConfig },
     createCheckout: { mutate: stripeApi.createCheckout },
-    createPaymentIntent: { mutate: stripeApi.createPaymentIntent },
-    getSession: { query: stripeApi.getSession },
+    getStatus: { query: stripeApi.getStatus },
   },
   emails: {
     sendTest: { mutate: emailsApi.sendTest },

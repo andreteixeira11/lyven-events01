@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
-import { Platform, Linking } from 'react-native';
+import { Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { stripeApi } from '@/lib/supabase-api';
+import { stripeApi, StripeCheckoutItem } from '@/lib/supabase-api';
 
-interface CheckoutOptions {
+/** Item único (compatibilidade com botões de compra pontual). */
+export interface CheckoutOptions {
   eventId: string;
   eventTitle: string;
   ticketTypeId: string;
@@ -14,12 +16,14 @@ interface CheckoutOptions {
   userEmail: string;
 }
 
-interface PaymentIntentOptions {
-  amount: number;
-  eventId: string;
-  ticketTypeId: string;
-  userId: string;
-  quantity: number;
+const NATIVE_RETURN_URL = 'lyven://stripe-return';
+
+function buildReturnUrls(): { returnUrl: string; cancelUrl: string } {
+  if (Platform.OS === 'web') {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return { returnUrl: `${origin}/checkout`, cancelUrl: `${origin}/checkout` };
+  }
+  return { returnUrl: NATIVE_RETURN_URL, cancelUrl: NATIVE_RETURN_URL };
 }
 
 export function useStripe() {
@@ -33,44 +37,40 @@ export function useStripe() {
   });
 
   const createCheckoutMutation = useMutation({ mutationFn: stripeApi.createCheckout });
-  const createPaymentIntentMutation = useMutation({ mutationFn: stripeApi.createPaymentIntent });
-  const getSessionQuery = (input: { sessionId: string }, opts?: any) => useQuery({
-    queryKey: ['stripe', 'getSession', input],
-    queryFn: () => stripeApi.getSession(input),
-    ...opts,
-  });
 
   const isConfigured = configQuery.data?.isConfigured ?? false;
   const publishableKey = configQuery.data?.publishableKey ?? null;
 
-  const createCheckoutSession = useCallback(async (options: CheckoutOptions) => {
+  /** Cria a sessão de checkout e abre a página de pagamento hospedada do Stripe. */
+  const createCheckoutSession = useCallback(async (options: CheckoutOptions | { items: StripeCheckoutItem[]; userId: string; userEmail: string; paymentMethod: 'card' | 'mbway' | 'multibanco' }) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      console.log('🔵 Creating checkout session:', options);
-      
-      const result = await createCheckoutMutation.mutateAsync(options);
-      
-      console.log('✅ Checkout session created:', result.sessionId);
-      
-      if (result.url) {
-        if (Platform.OS === 'web') {
-          window.location.href = result.url;
-        } else {
-          const canOpen = await Linking.canOpenURL(result.url);
-          if (canOpen) {
-            await Linking.openURL(result.url);
-          } else {
-            throw new Error('Cannot open payment URL');
-          }
-        }
+      const { returnUrl, cancelUrl } = buildReturnUrls();
+      const items: StripeCheckoutItem[] = 'items' in options
+        ? options.items
+        : [{ eventId: options.eventId, ticketTypeId: options.ticketTypeId, quantity: options.quantity }];
+
+      const result = await createCheckoutMutation.mutateAsync({
+        items,
+        userId: options.userId,
+        userEmail: options.userEmail,
+        paymentMethod: 'paymentMethod' in options ? options.paymentMethod : 'card',
+        returnUrl,
+        cancelUrl,
+      });
+
+      if (Platform.OS === 'web') {
+        window.location.href = result.url;
+      } else {
+        await WebBrowser.openAuthSessionAsync(result.url, NATIVE_RETURN_URL);
       }
-      
+
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create checkout session';
-      console.error('❌ Checkout error:', errorMessage);
+      console.error('[useStripe] checkout error:', errorMessage);
       setError(errorMessage);
       throw err;
     } finally {
@@ -78,47 +78,15 @@ export function useStripe() {
     }
   }, [createCheckoutMutation]);
 
-  const createPaymentIntent = useCallback(async (options: PaymentIntentOptions) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      console.log('🔵 Creating payment intent:', options);
-      
-      const result = await createPaymentIntentMutation.mutateAsync({
-        ...options,
-        currency: 'eur',
-      });
-      
-      console.log('✅ Payment intent created:', result.paymentIntentId);
-      
-      return result;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create payment intent';
-      console.error('❌ Payment intent error:', errorMessage);
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [createPaymentIntentMutation]);
-
-  const getSession = useCallback((sessionId: string) => {
-    return getSessionQuery({ sessionId }, {
-      enabled: !!sessionId,
-    });
-  }, [getSessionQuery]);
-
   return {
     isConfigured,
     publishableKey,
     isLoading: isLoading || configQuery.isLoading,
     error,
     createCheckoutSession,
-    createPaymentIntent,
-    getSession,
+    getStatus: stripeApi.getStatus,
     clearError: () => setError(null),
   };
 }
 
-export type { CheckoutOptions, PaymentIntentOptions };
+
