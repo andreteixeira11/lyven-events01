@@ -363,7 +363,9 @@ export default function CreateEvent() {
           console.log('✅ Image uploaded:', finalImageUrl);
         } catch (uploadErr: any) {
           console.error('❌ Image upload failed:', uploadErr?.message);
-          finalImageUrl = formData.imageUri;
+          // Nunca guardar URI local do dispositivo: o ficheiro não existe nos
+          // outros dispositivos e a imagem ficaria partida para toda a gente.
+          finalImageUrl = '';
         }
       }
 
@@ -439,7 +441,8 @@ export default function CreateEvent() {
           console.log('✅ Image uploaded:', finalImageUrlP);
         } catch (uploadErr: any) {
           console.error('❌ Image upload failed:', uploadErr?.message);
-          finalImageUrlP = formData.imageUri;
+          // Igual ao fluxo normal: sem upload bem-sucedido não guardamos URI local.
+          finalImageUrlP = '';
         }
       }
 

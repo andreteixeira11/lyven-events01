@@ -43,9 +43,10 @@ export async function uploadImageToBucket(
       const response = await fetch(imageUri);
       fileData = await response.blob();
     } else {
+      // Em nativo, enviar o ArrayBuffer diretamente: o Blob do React Native
+      // não é suportado de forma fiável pelo upload do supabase-js.
       const response = await fetch(imageUri);
-      const arrayBuffer = await response.arrayBuffer();
-      fileData = new Blob([arrayBuffer], { type: mimeType });
+      fileData = await response.arrayBuffer();
     }
 
     const { data, error } = await supabase.storage

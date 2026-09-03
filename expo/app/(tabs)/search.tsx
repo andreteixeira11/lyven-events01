@@ -184,6 +184,7 @@ function NormalUserSearchContent() {
   const [priceFilter, setPriceFilter] = useState<PriceFilter>('all');
   const [cityFilters, setCityFilters] = useState<string[]>([]);
   const [showCityPicker, setShowCityPicker] = useState(false);
+  const [locationPromptDismissed, setLocationPromptDismissed] = useState(false);
   const nearbyRadius = 50;
   const filterSlideAnim = useRef(new Animated.Value(0)).current;
   const { location, loading: locationLoading, error: locationError, requestLocation } = useUserLocation();
@@ -880,6 +881,7 @@ function NormalUserSearchContent() {
             </View>
           ) : (
             <View style={s.eventsContent}>
+              {(location || !locationPromptDismissed) && (
               <View style={[s.nearbySection, { backgroundColor: isDark ? '#0d2229' : '#edf9fb' }]}>
                 <View style={s.nearbySectionHeader}>
                   <View style={s.nearbySectionTitleRow}>
@@ -887,16 +889,25 @@ function NormalUserSearchContent() {
                     <Text style={[s.nearbySectionTitle, { color: colors.text }]}>Perto de mim</Text>
                   </View>
                   {!location && (
-                    <TouchableOpacity
-                      style={[s.enableLocationBtn, { backgroundColor: colors.primary }]}
-                      onPress={requestLocation}
-                      disabled={locationLoading}
-                    >
-                      <Compass size={14} color="#fff" />
-                      <Text style={s.enableLocationText}>
-                        {locationLoading ? 'A localizar...' : 'Ativar localização'}
-                      </Text>
-                    </TouchableOpacity>
+                    <View style={s.nearbyHeaderActions}>
+                      <TouchableOpacity
+                        style={[s.enableLocationBtn, { backgroundColor: colors.primary }]}
+                        onPress={requestLocation}
+                        disabled={locationLoading}
+                      >
+                        <Compass size={14} color="#fff" />
+                        <Text style={s.enableLocationText}>
+                          {locationLoading ? 'A localizar...' : 'Ativar localização'}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[s.dismissLocationBtn, { backgroundColor: colors.card }]}
+                        onPress={() => setLocationPromptDismissed(true)}
+                        accessibilityLabel="Fechar aviso de localização"
+                      >
+                        <X size={16} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
                   )}
                 </View>
                 {location ? (
@@ -952,6 +963,7 @@ function NormalUserSearchContent() {
                   </View>
                 )}
               </View>
+              )}
 
               {activeAds.length > 0 && (
                 <View style={{ marginBottom: 12 }}>
@@ -1734,6 +1746,8 @@ const s = StyleSheet.create({
   nearbySectionTitle: { fontSize: 17, fontWeight: '700' as const },
   enableLocationBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, gap: 6 },
   enableLocationText: { color: '#fff', fontSize: 12, fontWeight: '600' as const },
+  nearbyHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dismissLocationBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   nearbyScroll: { gap: 12 },
   nearbyCard: { width: 160, borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 },
   nearbyCardImage: { width: '100%', height: 100, resizeMode: 'cover' },
