@@ -44,6 +44,7 @@ interface EventFormData {
   ticketTypes: TicketTypeForm[];
   imageUrl: string;
   imageUri?: string;
+  imageBase64?: string;
 }
 
 
@@ -88,6 +89,7 @@ export default function CreateEvent() {
     ],
     imageUrl: '',
     imageUri: undefined,
+    imageBase64: undefined,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -158,6 +160,7 @@ export default function CreateEvent() {
         ],
         imageUrl: event.image,
         imageUri: undefined,
+        imageBase64: undefined,
       });
 
 
@@ -359,7 +362,7 @@ export default function CreateEvent() {
       if (formData.imageUri) {
         try {
           console.log('📤 Uploading image to Supabase storage...');
-          finalImageUrl = await uploadImageToBucket('events', formData.imageUri, 'event');
+          finalImageUrl = await uploadImageToBucket('events', formData.imageUri, 'event', formData.imageBase64);
           console.log('✅ Image uploaded:', finalImageUrl);
         } catch (uploadErr: any) {
           console.error('❌ Image upload failed:', uploadErr?.message);
@@ -437,7 +440,7 @@ export default function CreateEvent() {
       if (formData.imageUri) {
         try {
           console.log('📤 Uploading image to Supabase storage (promoção)...');
-          finalImageUrlP = await uploadImageToBucket('events', formData.imageUri, 'event');
+          finalImageUrlP = await uploadImageToBucket('events', formData.imageUri, 'event', formData.imageBase64);
           console.log('✅ Image uploaded:', finalImageUrlP);
         } catch (uploadErr: any) {
           console.error('❌ Image upload failed:', uploadErr?.message);
@@ -734,6 +737,7 @@ export default function CreateEvent() {
                   imageUri={formData.imageUri}
                   onImageUrlChange={(url) => updateFormData('imageUrl', url)}
                   onImageUriChange={(uri) => updateFormData('imageUri', uri)}
+                  onImageBase64Change={(b64) => updateFormData('imageBase64', b64)}
                 />
               )}
             </View>

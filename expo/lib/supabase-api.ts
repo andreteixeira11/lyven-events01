@@ -1621,7 +1621,11 @@ export const promotersApi = {
         const { data: eventTickets } = await supabase.from('tickets').select('quantity, price').in('event_id', eventIds);
         if (eventTickets) {
           totalTicketsSold = eventTickets.reduce((sum: number, t: any) => sum + (t.quantity || 0), 0);
-          totalRevenue = eventTickets.reduce((sum: number, t: any) => sum + ((t.price || 0) * (t.quantity || 0)), 0);
+          // Receita bruta = total pago pelos compradores (bilhetes + taxa de serviço)
+          totalRevenue = eventTickets.reduce(
+            (sum: number, t: any) => sum + (t.price || 0) * (t.quantity || 0) + calculateTicketCommission(t.price || 0) * (t.quantity || 0),
+            0
+          );
         }
       }
 
@@ -2360,14 +2364,19 @@ export const analyticsApi = {
       let totalCommission = 0;
       (ticketRevenue || []).forEach((t: any) => {
         const lineGross = (t.price || 0) * (t.quantity || 0);
-        totalRevenue += lineGross;
-        totalCommission += calculateTicketCommission(t.price || 0) * (t.quantity || 0);
+        const lineCommission = calculateTicketCommission(t.price || 0) * (t.quantity || 0);
+        // Receita bruta = total pago pelos compradores (bilhetes + taxa de serviço)
+        totalRevenue += lineGross + lineCommission;
+        totalCommission += lineCommission;
       });
       totalRevenue = roundCurrency(totalRevenue);
       totalCommission = roundCurrency(totalCommission);
 
       const { data: periodTicketRevenue } = await supabase.from('tickets').select('price, quantity').gte('purchase_date', startDateIso);
-      const periodRevenue = (periodTicketRevenue || []).reduce((sum: number, t: any) => sum + ((t.price || 0) * (t.quantity || 0)), 0);
+      const periodRevenue = (periodTicketRevenue || []).reduce(
+        (sum: number, t: any) => sum + (t.price || 0) * (t.quantity || 0) + calculateTicketCommission(t.price || 0) * (t.quantity || 0),
+        0
+      );
 
       const { count: activeAds } = await supabase.from('advertisements').select('*', { count: 'exact', head: true }).eq('is_active', true);
 
@@ -2474,7 +2483,8 @@ export const analyticsApi = {
         const lineCommission = calculateTicketCommission(unitPrice) * quantity;
 
         totalSold += quantity;
-        totalRevenue += lineRevenue;
+        // Receita bruta = total pago pelo comprador (bilhetes + taxa de serviço)
+        totalRevenue += lineRevenue + lineCommission;
         totalCommission += lineCommission;
         if (t.is_used) validatedCount += quantity;
 
@@ -2490,7 +2500,7 @@ export const analyticsApi = {
         }
         const ts = typeStats.get(t.ticket_type_id)!;
         ts.sold += quantity;
-        ts.revenue += lineRevenue;
+        ts.revenue += lineRevenue + lineCommission;
         ts.commission += lineCommission;
 
         return {
@@ -2504,7 +2514,7 @@ export const analyticsApi = {
           quantity,
           unitPrice,
           purchaseDate: t.purchase_date,
-          totalPaid: lineRevenue,
+          totalPaid: lineRevenue + lineCommission,
           qrCode: t.qr_code,
           isValidated: !!t.is_used,
           validatedAt: t.validated_at || undefined,
@@ -2566,7 +2576,8 @@ export const analyticsApi = {
         const lineCommission = calculateTicketCommission(unitPrice) * quantity;
 
         totalSold += quantity;
-        grossRevenue += lineGross;
+        // Receita bruta = total pago pelos compradores (bilhetes + taxa de serviço)
+        grossRevenue += lineGross + lineCommission;
         totalCommission += lineCommission;
 
         if (!perEvent.has(event.id)) {
@@ -2579,7 +2590,7 @@ export const analyticsApi = {
         }
         const es = perEvent.get(event.id)!;
         es.sold += quantity;
-        es.gross += lineGross;
+        es.gross += lineGross + lineCommission;
         es.commission += lineCommission;
       });
 

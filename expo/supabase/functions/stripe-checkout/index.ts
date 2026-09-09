@@ -22,6 +22,13 @@ function json(data: unknown, status = 200) {
   });
 }
 
+/** Taxa de serviço Lyven por bilhete (tier conforme preço unitário). */
+function ticketFee(unitPrice: number): number {
+  if (unitPrice <= 20) return unitPrice * 0.05 + 0.5;
+  if (unitPrice <= 50) return unitPrice * 0.045 + 0.6;
+  return unitPrice * 0.035 + 1.0;
+}
+
 interface CheckoutItem {
   eventId: string;
   ticketTypeId: string;
@@ -160,6 +167,21 @@ Deno.serve(async (req) => {
           },
         },
       });
+      // Taxa de serviço Lyven, cobrada por bilhete (tier conforme preço unitário) —
+      // cobrada ao comprador, tal como mostrado no resumo do checkout.
+      const fee = ticketFee(price);
+      if (fee > 0) {
+        lineItems.push({
+          quantity,
+          price_data: {
+            currency: "eur",
+            unit_amount: Math.round(fee * 100),
+            product_data: {
+              name: `Taxa de serviço Lyven — ${event.title} (${typeName})`,
+            },
+          },
+        });
+      }
     }
 
     const total = validatedItems.reduce((sum, i) => sum + i.price * i.quantity, 0);

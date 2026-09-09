@@ -24,10 +24,32 @@ function getMimeType(ext: string): string {
   return mimeMap[ext] || 'image/jpeg';
 }
 
+const B64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+/** Decodifica uma string base64 para ArrayBuffer (sem dependências nativas). */
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const clean = base64.replace(/[^A-Za-z0-9+/=]/g, '');
+  const byteLength = Math.floor(clean.length / 4) * 3;
+  const bytes = new Uint8Array(byteLength);
+  let p = 0;
+  for (let i = 0; i < clean.length; i += 4) {
+    const e1 = B64_ALPHABET.indexOf(clean[i]);
+    const e2 = B64_ALPHABET.indexOf(clean[i + 1]);
+    const e3 = clean[i + 2] === '=' ? -1 : B64_ALPHABET.indexOf(clean[i + 2]);
+    const e4 = clean[i + 3] === '=' ? -1 : B64_ALPHABET.indexOf(clean[i + 3]);
+    const n = (e1 << 18) | (e2 << 12) | ((e3 < 0 ? 0 : e3) << 6) | (e4 < 0 ? 0 : e4);
+    bytes[p++] = (n >> 16) & 0xff;
+    if (e3 >= 0) bytes[p++] = (n >> 8) & 0xff;
+    if (e4 >= 0) bytes[p++] = n & 0xff;
+  }
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + p) as ArrayBuffer;
+}
+
 export async function uploadImageToBucket(
   bucket: BucketName,
   imageUri: string,
-  prefix: string = 'img'
+  prefix: string = 'img',
+  base64?: string | null
 ): Promise<string> {
   try {
     console.log(`[uploadImageToBucket] Uploading to bucket: ${bucket}, uri: ${imageUri.substring(0, 60)}...`);
@@ -39,12 +61,16 @@ export async function uploadImageToBucket(
 
     let fileData: Blob | ArrayBuffer;
 
-    if (Platform.OS === 'web') {
+    if (base64) {
+      // Caminho preferido: o picker devolve a imagem já em base64, que
+      // decodificamos para bytes binários. O fetch() do React Native não
+      // suporta URIs file:// de forma fiável, por isso este é o caminho certo.
+      fileData = base64ToArrayBuffer(base64);
+    } else if (Platform.OS === 'web') {
       const response = await fetch(imageUri);
       fileData = await response.blob();
     } else {
-      // Em nativo, enviar o ArrayBuffer diretamente: o Blob do React Native
-      // não é suportado de forma fiável pelo upload do supabase-js.
+      // Fallback nativo (funciona para URIs http/https/data, não para file://)
       const response = await fetch(imageUri);
       fileData = await response.arrayBuffer();
     }

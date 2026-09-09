@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { calculateLineCommission } from './commission';
 import { DbPromoter, DbPromoterProfile, DbPromoterAuth, DbFollowing } from '@/types/database';
 import { Promoter, PromoterEvent } from '@/types/event';
 import { PromoterProfile } from '@/types/user';
@@ -271,8 +272,11 @@ export async function fetchPromoterEvents(promoterId: string): Promise<PromoterE
       if (tickets) {
         for (const ticket of tickets as { event_id: string; quantity: number; price: number }[]) {
           ticketCounts[ticket.event_id] = (ticketCounts[ticket.event_id] ?? 0) + ticket.quantity;
+          // Receita = total pago pelo comprador (bilhete + taxa de serviço)
           revenueTotals[ticket.event_id] =
-            (revenueTotals[ticket.event_id] ?? 0) + ticket.price * ticket.quantity;
+            (revenueTotals[ticket.event_id] ?? 0) +
+            ticket.price * ticket.quantity +
+            calculateLineCommission(ticket.price, ticket.quantity);
         }
       }
     }

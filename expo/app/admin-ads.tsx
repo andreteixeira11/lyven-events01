@@ -173,17 +173,18 @@ export default function AdminAds() {
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,
+        base64: true,
       });
 
       if (!result.canceled && result.assets[0]) {
         setIsUploading(true);
         try {
-          const publicUrl = await uploadImageToBucket('ads', result.assets[0].uri, 'ad');
+          const publicUrl = await uploadImageToBucket('ads', result.assets[0].uri, 'ad', result.assets[0].base64);
           setFormData(p => ({ ...p, image: publicUrl }));
         } catch (uploadErr: any) {
           console.error('Upload failed:', uploadErr);
-          setFormData(p => ({ ...p, image: result.assets[0]!.uri }));
-          Alert.alert('Aviso', 'Upload para o servidor falhou. A imagem local será usada.');
+          setFormData(p => ({ ...p, image: '' }));
+          Alert.alert('Erro', 'Não foi possível guardar a imagem no servidor. Tente novamente.');
         } finally {
           setIsUploading(false);
         }

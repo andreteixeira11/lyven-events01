@@ -279,16 +279,17 @@ export default function AdminEvents() {
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,
+        base64: true,
       });
       if (!result.canceled && result.assets[0]) {
         setIsUploadingImage(true);
         try {
-          const publicUrl = await uploadImageToBucket('events', result.assets[0].uri, 'event');
+          const publicUrl = await uploadImageToBucket('events', result.assets[0].uri, 'event', result.assets[0].base64);
           setNewEvent(p => ({ ...p, image: publicUrl }));
         } catch (uploadErr: any) {
           console.error('Upload failed:', uploadErr);
-          setNewEvent(p => ({ ...p, image: result.assets[0]!.uri }));
-          Alert.alert('Aviso', 'Upload falhou. Imagem local será usada.');
+          setNewEvent(p => ({ ...p, image: '' }));
+          Alert.alert('Erro', 'Não foi possível guardar a imagem no servidor. Tente novamente.');
         } finally {
           setIsUploadingImage(false);
         }

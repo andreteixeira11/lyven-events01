@@ -16,6 +16,7 @@ interface ImageStepProps {
   imageUri?: string;
   onImageUrlChange: (url: string) => void;
   onImageUriChange: (uri?: string) => void;
+  onImageBase64Change?: (base64?: string) => void;
 }
 
 export default function ImageStep({
@@ -23,6 +24,7 @@ export default function ImageStep({
   imageUri,
   onImageUrlChange,
   onImageUriChange,
+  onImageBase64Change,
 }: ImageStepProps) {
   const [imageMode, setImageMode] = React.useState<'url' | 'upload'>(
     imageUrl ? 'url' : 'upload'
@@ -40,10 +42,14 @@ export default function ImageStep({
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
+      // Necessário em nativo: o fetch() do React Native não consegue ler
+      // URIs file://, por isso enviamos os bytes já em base64 para o bucket.
+      base64: true,
     });
 
     if (!result.canceled && result.assets[0]) {
       onImageUriChange(result.assets[0].uri);
+      onImageBase64Change?.(result.assets[0].base64 ?? undefined);
       onImageUrlChange('');
     }
   };
@@ -101,6 +107,7 @@ export default function ImageStep({
             onChangeText={(text) => {
               onImageUrlChange(text?.trim() || '');
               onImageUriChange(undefined);
+              onImageBase64Change?.(undefined);
             }}
             placeholder="https://exemplo.com/imagem.jpg"
             placeholderTextColor="#999"
