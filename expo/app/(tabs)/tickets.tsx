@@ -9,6 +9,9 @@ import {
   Alert,
   PanResponder,
   Animated,
+  Linking,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
@@ -36,6 +39,7 @@ import CreateEvent from '@/app/create-event';
 import { router, useLocalSearchParams } from 'expo-router';
 import QRCode from '@/components/QRCode';
 import { api } from '@/lib/api';
+import { walletApi } from '@/lib/api';
 import { handleError, isRetryableError } from '@/lib/error-handler';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { RefreshControl } from 'react-native';
@@ -141,6 +145,20 @@ function NormalUserTicketsContent() {
   }, [tab]);
 
   const [selectedQRTicket, setSelectedQRTicket] = useState<string | null>(null);
+  const [addingPassId, setAddingPassId] = useState<string | null>(null);
+
+  /** Gera o passe Apple Wallet do bilhete e abre-o (iOS mostra "Adicionar à Apple Wallet"). */
+  const handleAddToWallet = useCallback(async (ticketId: string) => {
+    setAddingPassId(ticketId);
+    try {
+      const url = await walletApi.getPassUrl(ticketId);
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível abrir a Apple Wallet. Tente novamente.');
+    } finally {
+      setAddingPassId(null);
+    }
+  }, []);
 
   // Fetch tickets for current user
   const {
@@ -281,6 +299,19 @@ function NormalUserTicketsContent() {
         <View style={[styles.qrCodeContainer, { backgroundColor: colors.card }]}>
           <QRCode value={ticket.qrCode} size={200} />
           <Text style={[styles.qrCodeText, { color: colors.textSecondary }]}>{ticket.qrCode}</Text>
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={styles.walletButton}
+              onPress={() => handleAddToWallet(ticket.id)}
+              disabled={addingPassId === ticket.id}
+            >
+              {addingPassId === ticket.id ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.walletButtonText}>Adicionar à Apple Wallet</Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </TouchableOpacity>
@@ -332,6 +363,19 @@ function NormalUserTicketsContent() {
         <View style={[styles.qrCodeContainer, { backgroundColor: colors.card }]}>
           <QRCode value={ticket.qrCode} size={200} />
           <Text style={[styles.qrCodeText, { color: colors.textSecondary }]}>{ticket.qrCode}</Text>
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={styles.walletButton}
+              onPress={() => handleAddToWallet(ticket.id)}
+              disabled={addingPassId === ticket.id}
+            >
+              {addingPassId === ticket.id ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.walletButtonText}>Adicionar à Apple Wallet</Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </TouchableOpacity>
@@ -926,6 +970,20 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 12,
     fontWeight: '500' as const,
+  },
+  walletButton: {
+    marginTop: 16,
+    backgroundColor: '#000000',
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 24,
+    minWidth: 220,
+    alignItems: 'center',
+  },
+  walletButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600' as const,
   },
   sectionTitle: {
     fontSize: 24,

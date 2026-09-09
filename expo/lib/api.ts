@@ -9,6 +9,7 @@ import {
   notificationsApi,
   paymentMethodsApi,
   stripeApi,
+  walletApi,
   emailsApi,
   exampleApi,
   analyticsApi,
@@ -23,6 +24,8 @@ import {
   adminSettingsApi,
 } from './supabase-api';
 import React from 'react';
+
+export { walletApi };
 
 function createQueryHook<TInput, TOutput>(
   key: string[],

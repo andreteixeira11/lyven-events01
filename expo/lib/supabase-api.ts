@@ -2920,6 +2920,19 @@ export const stripeApi = {
   },
 };
 
+/** Apple Wallet — gera o passe do bilhete (.pkpass assinado). */
+export const walletApi = {
+  getPassUrl: async (ticketId: string): Promise<string> => {
+    const { data, error } = await supabase.functions.invoke('wallet-pass', {
+      body: { ticketId },
+    });
+    if (error) throw stripeError(error);
+    if (data?.error) throw new Error(data.error);
+    if (!data?.url) throw new Error('Não foi possível gerar o passe');
+    return data.url as string;
+  },
+};
+
 export const emailsApi = {
   sendTest: async (_input: any): Promise<{ success: boolean }> => {
     console.log('[emailsApi.sendTest] Email sending requires Supabase Edge Functions');
