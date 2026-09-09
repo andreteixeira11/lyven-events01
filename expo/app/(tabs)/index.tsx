@@ -218,11 +218,6 @@ function NormalUserExploreContent() {
       >
         <View style={styles.eventListImageWrap}>
           <EventImage uri={event.image} style={styles.eventListImage} />
-          {isFreeEvent(event) && (
-            <View style={styles.eventListFreeBadge} pointerEvents="none">
-              <FreeBadge size="sm" />
-            </View>
-          )}
         </View>
         <View style={styles.eventListContent}>
           <Text style={[styles.eventListTitle, { color: colors.text }]} numberOfLines={2}>
@@ -818,11 +813,6 @@ const styles = StyleSheet.create({
     width: 90,
     height: 100,
     resizeMode: 'cover',
-  },
-  eventListFreeBadge: {
-    position: 'absolute',
-    top: 6,
-    left: 6,
   },
   eventListContent: {
     flex: 1,

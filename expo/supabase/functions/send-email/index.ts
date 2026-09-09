@@ -134,11 +134,11 @@ Deno.serve(async (req: Request) => {
 
       case "sendNewEventNotification": {
         to = ADMIN_EMAIL;
-        subject = "Novo Evento Criado - Aguarda Aprovação";
-        html = emailWrapper("Novo Evento Aguarda Aprovação", `
-          <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#1a1a2e;">Novo evento submetido!</p>
+        subject = "Novo Evento Criado";
+        html = emailWrapper("Novo Evento Criado", `
+          <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#1a1a2e;">Novo evento criado!</p>
           <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6;">
-            Um promotor submeteu um novo evento que aguarda a sua aprovação.
+            Um promotor criou um novo evento na plataforma.
           </p>
           <div style="background-color:#f0fafb;border:1px solid #e6f6f7;border-radius:12px;padding:20px;margin:0 0 24px;">
             <p style="margin:0 0 8px;font-size:14px;color:#6b7280;"><strong style="color:#1a1a2e;">Evento:</strong> ${body.eventTitle}</p>
@@ -149,7 +149,7 @@ Deno.serve(async (req: Request) => {
             <p style="margin:0;font-size:14px;color:#6b7280;"><strong style="color:#1a1a2e;">Categoria:</strong> ${body.category}</p>
           </div>
           <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6;">
-            Aceda ao painel de administração para aprovar ou rejeitar este evento.
+            Aceda ao painel de administração para ver os detalhes deste evento.
           </p>`);
         break;
       }
