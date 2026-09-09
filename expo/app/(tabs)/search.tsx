@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Image,
   Animated,
   Platform,
   Modal,
   KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { EventImage } from '@/components/EventImage';
 import { router } from 'expo-router';
 import { 
   Users, 
@@ -433,7 +433,7 @@ function NormalUserSearchContent() {
       onPress={() => router.push(`/event/${event.id}` as any)}
       activeOpacity={0.85}
     >
-      <Image source={{ uri: event.image }} style={s.featuredCardImage} />
+      <EventImage uri={event.image} style={s.featuredCardImage} />
       {isFreeEvent(event) && (
         <View style={s.featuredFreeBadge} pointerEvents="none">
           <FreeBadge size="md" />
@@ -481,7 +481,7 @@ function NormalUserSearchContent() {
       activeOpacity={0.8}
     >
       <View style={s.listEventImageWrap}>
-        <Image source={{ uri: event.image }} style={s.listEventImage} />
+        <EventImage uri={event.image} style={s.listEventImage} />
         {isFreeEvent(event) && (
           <View style={s.listEventFreeBadge} pointerEvents="none">
             <FreeBadge size="sm" />
@@ -539,7 +539,7 @@ function NormalUserSearchContent() {
       activeOpacity={0.8}
     >
       <View style={s.gridEventImageWrap}>
-        <Image source={{ uri: event.image }} style={s.gridEventImage} />
+        <EventImage uri={event.image} style={s.gridEventImage} />
         {isFreeEvent(event) && (
           <View style={s.gridEventFreeBadge} pointerEvents="none">
             <FreeBadge size="sm" />
@@ -924,7 +924,7 @@ function NormalUserSearchContent() {
                             onPress={() => router.push(`/event/${event.id}` as any)}
                             activeOpacity={0.85}
                           >
-                            <Image source={{ uri: event.image }} style={s.nearbyCardImage} />
+                            <EventImage uri={event.image} style={s.nearbyCardImage} />
                             <View style={s.nearbyCardBody}>
                               <Text style={[s.nearbyCardTitle, { color: colors.text }]} numberOfLines={1}>
                                 {event.title}
@@ -1519,7 +1519,7 @@ function PromoterEventsContent() {
 
     return (
       <View style={[styles.eventCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Image source={{ uri: event.image }} style={styles.eventImage} />
+        <EventImage uri={event.image} style={styles.eventImage} />
         
         <View style={styles.eventContent}>
           <View style={styles.eventHeader}>
