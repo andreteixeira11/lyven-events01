@@ -24,6 +24,7 @@ function json(data: unknown, status = 200) {
 
 /** Taxa de serviço Lyven por bilhete (tier conforme preço unitário). */
 function ticketFee(unitPrice: number): number {
+  if (unitPrice <= 0) return 0; // Bilhetes gratuitos: sem taxa
   if (unitPrice <= 20) return unitPrice * 0.05 + 0.5;
   if (unitPrice <= 50) return unitPrice * 0.045 + 0.6;
   return unitPrice * 0.035 + 1.0;
@@ -156,17 +157,21 @@ Deno.serve(async (req) => {
 
       const typeName = String(tt.name ?? "Bilhete");
       validatedItems.push({ ...item, quantity, price, eventTitle: event.title, ticketTypeName: typeName });
-      lineItems.push({
-        quantity,
-        price_data: {
-          currency: "eur",
-          unit_amount: Math.round(price * 100),
-          product_data: {
-            name: `${event.title} — ${typeName}`,
-            ...(event.image && !event.image.startsWith("file://") ? { images: [event.image] } : {}),
+      // Bilhetes gratuitos (€0) não entram no Stripe; continuam nos
+      // validatedItems para o webhook emitir o bilhete.
+      if (price > 0) {
+        lineItems.push({
+          quantity,
+          price_data: {
+            currency: "eur",
+            unit_amount: Math.round(price * 100),
+            product_data: {
+              name: `${event.title} — ${typeName}`,
+              ...(event.image && !event.image.startsWith("file://") ? { images: [event.image] } : {}),
+            },
           },
-        },
-      });
+        });
+      }
       // Taxa de serviço Lyven, cobrada por bilhete (tier conforme preço unitário) —
       // cobrada ao comprador, tal como mostrado no resumo do checkout.
       const fee = ticketFee(price);

@@ -38,6 +38,7 @@ export function getCommissionTier(unitPrice: number): CommissionTier {
 
 /** Commission for a single ticket of the given unit price. */
 export function calculateTicketCommission(unitPrice: number): number {
+  if (unitPrice <= 0) return 0; // Bilhetes gratuitos: sem taxa de serviço
   const tier = getCommissionTier(unitPrice);
   return unitPrice * tier.percent + tier.fixed;
 }

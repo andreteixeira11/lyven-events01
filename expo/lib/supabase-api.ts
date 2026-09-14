@@ -1029,6 +1029,16 @@ export const usersApi = {
 };
 
 export const ticketsApi = {
+  /** Emite bilhetes gratuitos (€0) via edge function — sem pagamento. */
+  claimFree: async (input: {
+    items: Array<{ eventId: string; ticketTypeId: string; quantity: number; price: number; seatLabels?: string[] }>;
+  }): Promise<{ success: boolean }> => {
+    const { data, error } = await supabase.functions.invoke('claim-free-tickets', { body: input });
+    if (error) throw new Error(error.message ?? 'Erro ao emitir os bilhetes gratuitos');
+    if (data?.error) throw new Error(data.error);
+    return { success: true };
+  },
+
   /** Transfere bilhetes para outra conta (por email) via edge function — o servidor valida tudo. */
   transfer: async (input: { ticketIds: string[]; toEmail: string }): Promise<{ success: boolean }> => {
     const { data, error } = await supabase.functions.invoke('transfer-ticket', {

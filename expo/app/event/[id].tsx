@@ -201,6 +201,11 @@ export default function EventDetailScreen() {
     return Object.values(selectedTickets).reduce((total, quantity) => total + quantity, 0);
   };
 
+  const getSelectionTotal = () =>
+    hasSeatMap
+      ? selectedSeats.length * (event.ticketTypes[0]?.price ?? 0)
+      : getTotalPrice();
+
   const handleAddToCart = () => {
     if (!user) {
       Alert.alert(
@@ -802,17 +807,18 @@ export default function EventDetailScreen() {
                 : `${getTotalTickets()} bilhete(s)`}
             </Text>
             <Text style={[styles.footerPrice, { color: colors.primary }]}>
-              €{(hasSeatMap
-                ? selectedSeats.length * (event.ticketTypes[0]?.price ?? 0)
-                : getTotalPrice()
-              ).toFixed(2)}
+              {getSelectionTotal() === 0
+                ? 'Grátis'
+                : `€${getSelectionTotal().toFixed(2)}`}
             </Text>
           </View>
           <TouchableOpacity 
             style={[styles.addToCartButton, { backgroundColor: colors.primary }]}
             onPress={handleAddToCart}
           >
-            <Text style={styles.addToCartText}>Adicionar ao Carrinho</Text>
+            <Text style={styles.addToCartText}>
+              {getSelectionTotal() === 0 ? 'Obter Bilhete Grátis' : 'Adicionar ao Carrinho'}
+            </Text>
           </TouchableOpacity>
         </View>
       )}

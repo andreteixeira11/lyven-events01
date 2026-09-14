@@ -2,7 +2,7 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, TextInput,
 import { useCart } from "@/hooks/cart-context";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { api } from "@/lib/api";
-import { stripeApi } from "@/lib/supabase-api";
+import { stripeApi, ticketsApi } from "@/lib/supabase-api";
 import * as WebBrowser from 'expo-web-browser';
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { LoadingSpinner, ErrorState } from "@/components/LoadingStates";
@@ -40,7 +40,8 @@ export default function CheckoutScreen() {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const successScaleAnim = useRef(new Animated.Value(0)).current;
 
-  const steps: CheckoutStep[] = ['review', 'payment', 'confirm'];
+  const isFreeCheckout = cartItems.length > 0 && getTotalPrice() === 0;
+  const steps: CheckoutStep[] = isFreeCheckout ? ['review', 'confirm'] : ['review', 'payment', 'confirm'];
   const stepIndex = steps.indexOf(currentStep);
 
   useEffect(() => {
@@ -160,6 +161,22 @@ export default function CheckoutScreen() {
     }
 
     try {
+      // Carrinho 100% gratuito: emite os bilhetes diretamente — sem Stripe, sem pagamento.
+      if (subtotal === 0) {
+        await ticketsApi.claimFree({
+          items: cartItems.map(item => ({
+            eventId: item.eventId,
+            ticketTypeId: item.ticketTypeId,
+            quantity: item.quantity,
+            price: item.price,
+            seatLabels: item.seatLabels,
+          })),
+        });
+        setIsProcessing(false);
+        finishPurchase();
+        return;
+      }
+
       // Nativo: regressa via deep link. Web: regressa a esta página com ?session_id=...
       const returnUrl = Platform.OS === 'web'
         ? `${window.location.origin}/checkout`
@@ -249,7 +266,7 @@ export default function CheckoutScreen() {
     return (
       <View style={[styles.stepIndicator, { backgroundColor: colors.card }]}>
         <View style={styles.stepLabels}>
-          {['Resumo', 'Pagamento', 'Confirmar'].map((label, index) => (
+          {steps.map(s => s === 'review' ? 'Resumo' : s === 'payment' ? 'Pagamento' : 'Confirmar').map((label, index) => (
             <TouchableOpacity 
               key={label} 
               style={styles.stepLabel}
@@ -586,7 +603,7 @@ export default function CheckoutScreen() {
   const renderConfirmStep = () => (
     <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
       <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Confirmar Compra
+        {isFreeCheckout ? 'Confirmar Bilhetes' : 'Confirmar Compra'}
       </Text>
 
       <View style={[styles.summaryCard, { backgroundColor: colors.card }, SHADOWS.md]}>
@@ -628,40 +645,52 @@ export default function CheckoutScreen() {
           {COMMISSION_TIERS_DESCRIPTION}
         </Text>
         <View style={[styles.summaryTotalRow, { borderTopColor: colors.primary }]}>
-          <Text style={[styles.summaryTotalLabel, { color: colors.text }]}>Total a Pagar</Text>
-          <Text style={[styles.summaryTotalValue, { color: colors.primary }]}>€{total.toFixed(2)}</Text>
+          <Text style={[styles.summaryTotalLabel, { color: colors.text }]}>{isFreeCheckout ? 'Total' : 'Total a Pagar'}</Text>
+          <Text style={[styles.summaryTotalValue, { color: colors.primary }]}>{isFreeCheckout ? 'Grátis' : `€${total.toFixed(2)}`}</Text>
         </View>
       </View>
 
-      <View style={[styles.paymentSummary, { backgroundColor: colors.card }, SHADOWS.sm]}>
-        <Text style={[styles.paymentSummaryTitle, { color: colors.text }]}>Método de Pagamento</Text>
-        <View style={styles.paymentSummaryContent}>
-          {selectedPayment === 'card' && (
-            <>
-              <CreditCard size={20} color={colors.primary} />
-              <Text style={[styles.paymentSummaryText, { color: colors.textSecondary }]}>
-                Cartão de crédito/débito (via Stripe)
-              </Text>
-            </>
-          )}
-          {selectedPayment === 'mbway' && (
-            <>
-              <Phone size={20} color={colors.primary} />
-              <Text style={[styles.paymentSummaryText, { color: colors.textSecondary }]}>
-                MB WAY (via Stripe)
-              </Text>
-            </>
-          )}
-          {selectedPayment === 'multibanco' && (
-            <>
-              <Building2 size={20} color={colors.primary} />
-              <Text style={[styles.paymentSummaryText, { color: colors.textSecondary }]}>
-                Referência Multibanco (via Stripe)
-              </Text>
-            </>
-          )}
+      {isFreeCheckout ? (
+        <View style={[styles.paymentSummary, { backgroundColor: colors.card }, SHADOWS.sm]}>
+          <Text style={[styles.paymentSummaryTitle, { color: colors.text }]}>Emissão</Text>
+          <View style={styles.paymentSummaryContent}>
+            <Ticket size={20} color={colors.primary} />
+            <Text style={[styles.paymentSummaryText, { color: colors.textSecondary }]}>
+              Bilhetes gratuitos — serão emitidos imediatamente, sem qualquer pagamento.
+            </Text>
+          </View>
         </View>
-      </View>
+      ) : (
+        <View style={[styles.paymentSummary, { backgroundColor: colors.card }, SHADOWS.sm]}>
+          <Text style={[styles.paymentSummaryTitle, { color: colors.text }]}>Método de Pagamento</Text>
+          <View style={styles.paymentSummaryContent}>
+            {selectedPayment === 'card' && (
+              <>
+                <CreditCard size={20} color={colors.primary} />
+                <Text style={[styles.paymentSummaryText, { color: colors.textSecondary }]}>
+                  Cartão de crédito/débito (via Stripe)
+                </Text>
+              </>
+            )}
+            {selectedPayment === 'mbway' && (
+              <>
+                <Phone size={20} color={colors.primary} />
+                <Text style={[styles.paymentSummaryText, { color: colors.textSecondary }]}>
+                  MB WAY (via Stripe)
+                </Text>
+              </>
+            )}
+            {selectedPayment === 'multibanco' && (
+              <>
+                <Building2 size={20} color={colors.primary} />
+                <Text style={[styles.paymentSummaryText, { color: colors.textSecondary }]}>
+                  Referência Multibanco (via Stripe)
+                </Text>
+              </>
+            )}
+          </View>
+        </View>
+      )}
 
       <Text style={[styles.termsText, { color: colors.textSecondary }]}>
         Ao finalizar a compra, concorda com os nossos{' '}
@@ -726,7 +755,7 @@ export default function CheckoutScreen() {
         <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
           <View style={styles.footerPrice}>
             <Text style={[styles.footerLabel, { color: colors.textSecondary }]}>Total</Text>
-            <Text style={[styles.footerTotal, { color: colors.primary }]}>€{total.toFixed(2)}</Text>
+            <Text style={[styles.footerTotal, { color: colors.primary }]}>{isFreeCheckout ? 'Grátis' : `€${total.toFixed(2)}`}</Text>
           </View>
           <TouchableOpacity 
             style={[
@@ -744,7 +773,7 @@ export default function CheckoutScreen() {
             ) : (
               <>
                 <Text style={[styles.footerButtonText, { color: colors.white }]}>
-                  {currentStep === 'confirm' ? 'Confirmar Pagamento' : 'Continuar'}
+                  {currentStep === 'confirm' ? (isFreeCheckout ? 'Obter Bilhetes Grátis' : 'Confirmar Pagamento') : 'Continuar'}
                 </Text>
                 {currentStep !== 'confirm' && <ChevronRight size={20} color={colors.white} />}
               </>
