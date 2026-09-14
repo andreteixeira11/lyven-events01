@@ -213,7 +213,7 @@ export default function EventDetailScreen() {
         'É necessário iniciar sessão para comprar bilhetes. Deseja entrar agora?',
         [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Entrar', onPress: () => router.push('/login') },
+          { text: 'Entrar', onPress: () => router.push('/(tabs)/profile') },
         ]
       );
       return;

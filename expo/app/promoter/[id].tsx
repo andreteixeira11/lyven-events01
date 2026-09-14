@@ -73,7 +73,7 @@ export default function PromoterScreen() {
 
   const handleFollowToggle = async () => {
     if (!user?.id) {
-      router.push('/login');
+      router.push('/(tabs)/profile');
       return;
     }
 
