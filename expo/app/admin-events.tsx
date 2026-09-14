@@ -69,6 +69,7 @@ export default function AdminEvents() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'pending' | 'cancelled'>('all');
+  const [featuredOnly, setFeaturedOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPromoterPicker, setShowPromoterPicker] = useState(false);
@@ -96,6 +97,12 @@ export default function AdminEvents() {
     },
   });
   const deleteMutation = api.events.delete.useMutation({
+    onSuccess: () => {
+      void refetchEvents();
+      void queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
+  });
+  const setFeaturedMutation = api.events.setFeatured.useMutation({
     onSuccess: () => {
       void refetchEvents();
       void queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -180,6 +187,7 @@ export default function AdminEvents() {
       soldTickets: statsMap[e.id]?.ticketsSold || 0,
       status: e.isSoldOut ? 'completed' : (e as any).status || 'published',
       isVerified: e.promoter?.verified || false,
+      isFeatured: e.isFeatured || false,
       revenue: statsMap[e.id]?.revenue || 0,
     };
     });
@@ -190,8 +198,9 @@ export default function AdminEvents() {
       event.promoterName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       event.location.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filterStatus === 'all' || event.status === filterStatus;
-    return matchesSearch && matchesFilter;
-  }), [events, searchQuery, filterStatus]);
+    const matchesFeatured = !featuredOnly || event.isFeatured;
+    return matchesSearch && matchesFilter && matchesFeatured;
+  }), [events, searchQuery, filterStatus, featuredOnly]);
 
   const getCategoryLabel = (cat: string) => {
     return CATEGORY_MAP.find(c => c.value === cat)?.label ?? (cat || 'Outro');
@@ -224,6 +233,21 @@ export default function AdminEvents() {
       return dateString;
     }
   };
+
+  const handleToggleFeatured = useCallback(async (event: { id: string; isFeatured?: boolean }) => {
+    try {
+      await setFeaturedMutation.mutateAsync({ id: event.id, featured: !event.isFeatured });
+      Alert.alert(
+        'Sucesso',
+        event.isFeatured
+          ? 'Evento removido dos destaques da tab Explorar.'
+          : 'Evento adicionado aos destaques da tab Explorar!'
+      );
+    } catch (err) {
+      console.error('[admin-events] setFeatured:', err);
+      Alert.alert('Erro', 'Não foi possível atualizar o destaque. Tente novamente.');
+    }
+  }, [setFeaturedMutation]);
 
   const handleLogout = () => {
     Alert.alert('Terminar Sessão', 'Tem certeza?', [
@@ -423,6 +447,14 @@ export default function AdminEvents() {
                 </Text>
               </TouchableOpacity>
             ))}
+            <TouchableOpacity
+              style={[styles.filterOption, featuredOnly && styles.filterOptionActive]}
+              onPress={() => setFeaturedOnly(!featuredOnly)}
+            >
+              <Text style={[styles.filterOptionText, featuredOnly && styles.filterOptionTextActive]}>
+                ⭐ Em destaque
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -471,6 +503,11 @@ export default function AdminEvents() {
                         {getStatusLabel(event.status)}
                       </Text>
                     </View>
+                    {event.isFeatured && (
+                      <View style={[styles.statusBadge, { backgroundColor: COLORS.primary + '20' }]}>
+                        <Text style={[styles.statusText, { color: COLORS.primary }]}>⭐ Destaque</Text>
+                      </View>
+                    )}
                   </View>
                   <ChevronRight size={20} color={COLORS.textSecondary} />
                 </View>
@@ -511,6 +548,13 @@ export default function AdminEvents() {
 
                 {event.status === 'published' && (
                   <View style={styles.eventActions}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, { backgroundColor: event.isFeatured ? COLORS.primary : COLORS.info }]}
+                      onPress={(e) => { e.stopPropagation(); void handleToggleFeatured(event); }}
+                    >
+                      <Star size={16} color={COLORS.white} fill={event.isFeatured ? COLORS.white : 'transparent'} />
+                      <Text style={styles.actionButtonText}>{event.isFeatured ? 'Remover Destaque' : 'Destacar'}</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.actionButton, { backgroundColor: COLORS.warning }]}
                       onPress={(e) => { e.stopPropagation(); handleEventAction(event.id, 'cancel'); }}
