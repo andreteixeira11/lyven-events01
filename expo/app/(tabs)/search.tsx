@@ -214,7 +214,7 @@ function NormalUserSearchContent() {
     error: eventsError,
     refetch: refetchEvents 
   } = api.events.list.useQuery(
-    { category: selectedCategory === 'all' ? undefined : selectedCategory as any, status: 'published' },
+    { category: selectedCategory === 'all' ? undefined : selectedCategory as any, status: 'published', upcoming: true },
     { enabled: debouncedSearchQuery.length === 0 }
   );
 

@@ -112,6 +112,7 @@ export const eventsApi = {
         .select('*, promoters(*)')
         .order('date', { ascending: true });
 
+      if (input?.upcoming) query = query.gte('date', new Date().toISOString());
       if (input?.featured) query = query.eq('is_featured', true);
       if (input?.promoterId) query = query.eq('promoter_id', input.promoterId);
       if (input?.category) query = query.eq('category', input.category);
@@ -577,8 +578,9 @@ export const eventsApi = {
       }
       if (input?.category) query = query.eq('category', input.category);
       if (input?.venueCity) query = query.ilike('venue_city', `%${input.venueCity}%`);
-      // Public search only shows approved events
+      // Public search only shows approved, non-finished events
       query = query.eq('status', 'published');
+      query = query.gte('date', new Date().toISOString());
 
       const { data, error } = await query;
 
@@ -598,6 +600,7 @@ export const eventsApi = {
         .from('events')
         .select('title, venue_city')
         .or(`title.ilike.%${input.query}%,venue_city.ilike.%${input.query}%`)
+        .gte('date', new Date().toISOString())
         .limit(5);
 
       if (data && data.length > 0) {
