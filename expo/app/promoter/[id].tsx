@@ -102,6 +102,9 @@ export default function PromoterScreen() {
     });
   };
 
+  const formatCount = (n: number) =>
+    n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n ?? 0);
+
   const formatTime = (date: Date | string) => {
     return new Date(date).toLocaleTimeString('pt-PT', {
       hour: '2-digit',
@@ -135,7 +138,7 @@ export default function PromoterScreen() {
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {(promoter.followersCount / 1000).toFixed(1)}k
+                {formatCount(promoter.followersCount)}
               </Text>
               <Text style={styles.statLabel}>Seguidores</Text>
             </View>

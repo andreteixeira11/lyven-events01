@@ -14,6 +14,7 @@ import {
   Modal,
   Platform,
   KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -35,7 +36,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/theme-context';
 import { useUser } from '@/hooks/user-context';
-import { api } from '@/lib/api';
+import { api, ticketsApi } from '@/lib/api';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
 import QRCode from '@/components/QRCode';
@@ -62,6 +63,7 @@ export default function TicketDetailsScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [transferModalVisible, setTransferModalVisible] = useState(false);
   const [transferEmail, setTransferEmail] = useState('');
+  const [isTransferring, setIsTransferring] = useState(false);
   const [refundModalVisible, setRefundModalVisible] = useState(false);
 
   // Fetch the real ticket from Supabase
@@ -273,25 +275,42 @@ export default function TicketDetailsScreen() {
   };
 
   const confirmTransfer = () => {
-    if (!transferEmail.trim()) {
+    const email = transferEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       Alert.alert('Erro', 'Por favor, insira um email válido');
       return;
     }
-    
+    const ticketIds = tickets.map((t) => t.id);
+    if (ticketIds.length === 0) {
+      Alert.alert('Erro', 'Não há bilhetes para transferir.');
+      return;
+    }
+
     Alert.alert(
       'Confirmar Transferência',
-      `Deseja transferir ${tickets.length} bilhete(s) para ${transferEmail}?`,
+      `Deseja transferir ${tickets.length} bilhete(s) para ${email}?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Transferir',
-          onPress: () => {
-            console.log('Transferindo bilhetes para:', transferEmail);
-            setTransferModalVisible(false);
-            setTransferEmail('');
-            Alert.alert('Sucesso', 'Bilhetes transferidos com sucesso!');
-          }
-        }
+          onPress: async () => {
+            setIsTransferring(true);
+            try {
+              await ticketsApi.transfer({ ticketIds, toEmail: email });
+              setTransferModalVisible(false);
+              setTransferEmail('');
+              Alert.alert(
+                'Sucesso',
+                `Bilhete(s) transferidos para ${email}. O destinatário recebeu um email.`,
+                [{ text: 'OK', onPress: () => router.back() }]
+              );
+            } catch (err: any) {
+              Alert.alert('Erro', err?.message ?? 'Não foi possível transferir os bilhetes. Tente novamente.');
+            } finally {
+              setIsTransferring(false);
+            }
+          },
+        },
       ]
     );
   };
@@ -607,8 +626,13 @@ export default function TicketDetailsScreen() {
                 <TouchableOpacity
                   style={[styles.modalButton, { backgroundColor: colors.primary }]}
                   onPress={confirmTransfer}
+                  disabled={isTransferring}
                 >
-                  <Text style={[styles.modalButtonText, { color: colors.white }]}>Transferir</Text>
+                  {isTransferring ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <Text style={[styles.modalButtonText, { color: colors.white }]}>Transferir</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>

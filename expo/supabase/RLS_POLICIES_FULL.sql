@@ -164,6 +164,11 @@ CREATE POLICY "following_select" ON public.following FOR SELECT TO authenticated
     user_id = auth.uid()::text
     OR public.is_admin(auth.uid()::text)
   );
+-- Users can follow/unfollow themselves only
+CREATE POLICY "following_insert" ON public.following FOR INSERT TO authenticated
+  WITH CHECK (user_id = auth.uid()::text);
+CREATE POLICY "following_delete" ON public.following FOR DELETE TO authenticated
+  USING (user_id = auth.uid()::text);
 
 -- 9. event_statistics
 ALTER TABLE public.event_statistics ENABLE ROW LEVEL SECURITY;

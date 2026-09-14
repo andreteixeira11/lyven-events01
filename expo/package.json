@@ -27,7 +27,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-community/netinfo": "11.4.1",
-    "@rork-ai/toolkit-sdk": "^0.2.54",
+    "@rork-ai/toolkit-sdk": "0.3.0",
     "@stardazed/streams-text-encoding": "^1.0.2",
     "@stripe/stripe-react-native": "0.57.2",
     "@supabase/supabase-js": "^2.94.0",

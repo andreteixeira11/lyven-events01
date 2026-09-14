@@ -1029,6 +1029,16 @@ export const usersApi = {
 };
 
 export const ticketsApi = {
+  /** Transfere bilhetes para outra conta (por email) via edge function — o servidor valida tudo. */
+  transfer: async (input: { ticketIds: string[]; toEmail: string }): Promise<{ success: boolean }> => {
+    const { data, error } = await supabase.functions.invoke('transfer-ticket', {
+      body: { ticketIds: input.ticketIds, toEmail: input.toEmail },
+    });
+    if (error) throw new Error(error.message ?? 'Erro ao transferir os bilhetes');
+    if (data?.error) throw new Error(data.error);
+    return { success: true };
+  },
+
   create: async (input: any): Promise<any> => {
     try {
       const { data, error } = await supabase.from('tickets').insert({
@@ -1199,17 +1209,6 @@ export const ticketsApi = {
       return { success: true };
     } catch (err) {
       console.error('[ticketsApi.cancel] error:', err);
-      throw err;
-    }
-  },
-
-  transfer: async (input: { ticketId: string; toUserId: string }): Promise<{ success: boolean }> => {
-    try {
-      const { error } = await supabase.from('tickets').update({ user_id: input.toUserId }).eq('id', input.ticketId);
-      if (error) throw error;
-      return { success: true };
-    } catch (err) {
-      console.error('[ticketsApi.transfer] error:', err);
       throw err;
     }
   },
@@ -1839,29 +1838,47 @@ export const advertisementsApi = {
 
 export const socialApi = {
   follow: async (input: { userId: string; promoterId?: string }): Promise<{ success: boolean }> => {
-    try {
-      await supabase.from('following').insert({
-        id: genId('follow'),
-        user_id: input.userId,
-        promoter_id: input.promoterId || null,
-        followed_at: new Date().toISOString(),
-      });
-      return { success: true };
-    } catch {
-      return { success: true };
+    const { error } = await supabase.from('following').insert({
+      id: genId('follow'),
+      user_id: input.userId,
+      promoter_id: input.promoterId || null,
+      followed_at: new Date().toISOString(),
+    });
+    if (error) {
+      // Seguir duas vezes é inofensivo; outros erros chegam à UI
+      if (error.code !== '23505') {
+        console.error('[socialApi.follow]', error.message);
+        throw new Error('Não foi possível seguir este promotor.');
+      }
     }
+    if (input.promoterId) {
+      // Mantém o contador de seguidores do promotor atualizado
+      const { data: row } = await supabase.from('promoters')
+        .select('followers_count').eq('id', input.promoterId).single();
+      await supabase.from('promoters')
+        .update({ followers_count: (row?.followers_count ?? 0) + 1 })
+        .eq('id', input.promoterId);
+    }
+    return { success: true };
   },
 
   unfollow: async (input: { userId: string; promoterId?: string }): Promise<{ success: boolean }> => {
-    try {
-      await supabase.from('following')
-        .delete()
-        .eq('user_id', input.userId)
-        .eq('promoter_id', input.promoterId || '');
-      return { success: true };
-    } catch {
-      return { success: true };
+    const { error } = await supabase.from('following')
+      .delete()
+      .eq('user_id', input.userId)
+      .eq('promoter_id', input.promoterId || '');
+    if (error) {
+      console.error('[socialApi.unfollow]', error.message);
+      throw new Error('Não foi possível deixar de seguir este promotor.');
     }
+    if (input.promoterId) {
+      const { data: row } = await supabase.from('promoters')
+        .select('followers_count').eq('id', input.promoterId).single();
+      await supabase.from('promoters')
+        .update({ followers_count: Math.max((row?.followers_count ?? 0) - 1, 0) })
+        .eq('id', input.promoterId);
+    }
+    return { success: true };
   },
 
   isFollowing: async (input: { userId: string; promoterId: string }): Promise<{ isFollowing: boolean }> => {
@@ -2411,7 +2428,9 @@ export const analyticsApi = {
       (tickets || []).forEach((t: any) => {
         if (!statsMap[t.event_id]) statsMap[t.event_id] = { ticketsSold: 0, revenue: 0 };
         statsMap[t.event_id].ticketsSold += t.quantity || 0;
-        statsMap[t.event_id].revenue += (t.price || 0) * (t.quantity || 0);
+        // Receita bruta = total pago pelo comprador (bilhetes + taxa de serviço)
+        statsMap[t.event_id].revenue += (t.price || 0) * (t.quantity || 0)
+          + calculateTicketCommission(t.price || 0) * (t.quantity || 0);
       });
 
       const events = rawEvents.map((e: any) => ({

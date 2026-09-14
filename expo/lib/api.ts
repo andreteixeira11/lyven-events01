@@ -25,7 +25,7 @@ import {
 } from './supabase-api';
 import React from 'react';
 
-export { walletApi };
+export { walletApi, ticketsApi };
 
 function createQueryHook<TInput, TOutput>(
   key: string[],
