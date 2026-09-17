@@ -503,7 +503,7 @@ export default function EventDetailScreen() {
               <View style={styles.infoContent}>
                 <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Local</Text>
                 <Text style={[styles.infoText, { color: colors.text }]}>{event.venue.name}</Text>
-                <Text style={[styles.infoSubtext, { color: colors.textSecondary }]}>{event.venue.address}, {event.venue.city}</Text>
+                <Text style={[styles.infoSubtext, { color: colors.textSecondary }]}>{[event.venue.address, event.venue.city].filter(Boolean).join(', ')}</Text>
               </View>
             </View>
             

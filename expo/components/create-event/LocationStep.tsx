@@ -10,15 +10,19 @@ import { MapPin } from 'lucide-react-native';
 interface LocationStepProps {
   venue: string;
   address: string;
+  city: string;
   onVenueChange: (text: string) => void;
   onAddressChange: (text: string) => void;
+  onCityChange: (text: string) => void;
 }
 
 export default function LocationStep({
   venue,
   address,
+  city,
   onVenueChange,
   onAddressChange,
+  onCityChange,
 }: LocationStepProps) {
   return (
     <View style={styles.container}>
@@ -51,6 +55,20 @@ export default function LocationStep({
           value={address}
           onChangeText={onAddressChange}
           placeholder="Endereço completo do evento"
+          placeholderTextColor="#999"
+        />
+      </View>
+
+      <View style={styles.inputContainer}>
+        <View style={styles.inputLabel}>
+          <MapPin size={20} color="#0099a8" />
+          <Text style={styles.inputLabelText}>Cidade *</Text>
+        </View>
+        <TextInput
+          style={styles.input}
+          value={city}
+          onChangeText={onCityChange}
+          placeholder="Ex: Funchal"
           placeholderTextColor="#999"
         />
       </View>

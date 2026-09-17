@@ -34,6 +34,7 @@ interface EventFormData {
   description: string;
   venue: string;
   address: string;
+  city: string;
   date: Date;
   endDate?: Date;
   time?: Date;
@@ -70,6 +71,7 @@ export default function CreateEvent() {
     description: '',
     venue: '',
     address: '',
+    city: '',
     date: new Date(),
     endDate: undefined,
     time: undefined,
@@ -141,6 +143,7 @@ export default function CreateEvent() {
         description: event.description || '',
         venue: event.venue?.name || '',
         address: event.venue?.address || '',
+        city: event.venue?.city || '',
         date: eventDate,
         endDate: endDateVal,
         time: eventTime,
@@ -192,6 +195,11 @@ export default function CreateEvent() {
 
     if (!formData.address || formData.address.trim() === '') {
       Alert.alert('Erro', 'Por favor, preencha o endereço do evento.');
+      return false;
+    }
+
+    if (!formData.city || formData.city.trim() === '') {
+      Alert.alert('Erro', 'Por favor, preencha a cidade do evento.');
       return false;
     }
 
@@ -377,6 +385,7 @@ export default function CreateEvent() {
         description: formData.description || undefined,
         venueName: formData.venue,
         venueAddress: formData.address,
+        venueCity: formData.city,
         date: fullDate,
         endDate: endDateStr || undefined,
         category: formData.category,
@@ -454,6 +463,7 @@ export default function CreateEvent() {
         description: formData.description || undefined,
         venueName: formData.venue,
         venueAddress: formData.address,
+        venueCity: formData.city,
         date: fullDateP,
         endDate: endDateStrP || undefined,
         category: formData.category,
@@ -553,6 +563,10 @@ export default function CreateEvent() {
         }
         if (!formData.address || formData.address.trim() === '') {
           Alert.alert('Erro', 'Por favor, preencha o endereço do evento.');
+          return false;
+        }
+        if (!formData.city || formData.city.trim() === '') {
+          Alert.alert('Erro', 'Por favor, preencha a cidade do evento.');
           return false;
         }
         return true;
@@ -690,8 +704,10 @@ export default function CreateEvent() {
                 <LocationStep
                   venue={formData.venue}
                   address={formData.address}
+                  city={formData.city}
                   onVenueChange={(text) => updateFormData('venue', text ?? '')}
                   onAddressChange={(text) => updateFormData('address', text ?? '')}
+                  onCityChange={(text) => updateFormData('city', text ?? '')}
                 />
               )}
 
