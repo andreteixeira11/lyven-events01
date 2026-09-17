@@ -4,6 +4,7 @@ import { useFavorites } from '@/hooks/favorites-context';
 import { router, Stack } from 'expo-router';
 import { useMemo } from 'react';
 import { useTheme } from '@/hooks/theme-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/lib/api';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
@@ -13,6 +14,7 @@ import { FreeBadge, isFreeEvent } from '@/components/FreeBadge';
 export default function FavoritesScreen() {
   const { isFavorite, removeFromFavorites, hasReminder, shareEvent, addToCalendar } = useFavorites();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const { data: allEventsData, isLoading, error, refetch } = api.events.list.useQuery({ status: 'published' });
 
@@ -125,6 +127,10 @@ export default function FavoritesScreen() {
           headerTintColor: colors.text,
         }} 
       />
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.background, paddingTop: insets.top + 8 }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Favoritos</Text>
+      </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Upcoming Events */}
         {upcomingEvents.length > 0 && (
@@ -296,8 +302,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold' as const,
     color: '#fff',
   },
+  header: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold' as const,
+  },
   scrollContent: {
-    paddingTop: 32,
+    paddingTop: 8,
     paddingBottom: 20,
   },
   section: {

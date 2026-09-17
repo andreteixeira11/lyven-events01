@@ -30,17 +30,9 @@ export default function FollowingScreen() {
 
   const promoters = React.useMemo(() => {
     return (followingQuery.data || []).filter(
-      (item: any) => item.promoterId
+      (item: any) => item.promoterId && item.promoter
     ) || [];
   }, [followingQuery.data]);
-
-  React.useEffect(() => {
-    if (followingQuery.data) {
-      console.log('Following data received:', JSON.stringify(followingQuery.data, null, 2));
-      console.log('Filtered promoters count:', promoters.length);
-      console.log('Promoters:', promoters);
-    }
-  }, [followingQuery.data, promoters]);
 
   if (!user) {
     return (
@@ -101,14 +93,14 @@ export default function FollowingScreen() {
             contentContainerStyle={styles.scrollContent}
           >
             {promoters.map((item: any) => {
-              const promoter = item.data;
+              const promoter = item.promoter;
               if (!promoter) return null;
 
               return (
                 <TouchableOpacity
-                  key={item.id}
+                  key={item.promoterId}
                   style={[styles.promoterCard, { backgroundColor: colors.card }]}
-                  onPress={() => router.push(`/promoter/${item.id}` as any)}
+                  onPress={() => router.push(`/promoter/${item.promoterId}` as any)}
                   activeOpacity={0.8}
                 >
                   <Image

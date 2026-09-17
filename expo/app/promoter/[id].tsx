@@ -22,7 +22,10 @@ export default function PromoterScreen() {
 
   const promoterId = Array.isArray(id) ? id[0] : id;
 
-  const eventsQuery = api.events.list.useQuery({ status: 'published' });
+  const eventsQuery = api.events.list.useQuery(
+    { promoterId: promoterId || '' },
+    { enabled: !!promoterId }
+  );
   
   const isFollowingQuery = api.social.isFollowing.useQuery(
     {
@@ -113,7 +116,7 @@ export default function PromoterScreen() {
   };
 
   const upcomingEvents = promoterEvents
-    .filter((event: { date: string | Date }) => new Date(event.date) >= new Date())
+    .filter((event: { date: string | Date; status?: string }) => event.status === 'published' && new Date(event.date) >= new Date())
     .sort((a: { date: string | Date }, b: { date: string | Date }) => {
       const dateA = typeof a.date === 'string' ? new Date(a.date) : a.date;
       const dateB = typeof b.date === 'string' ? new Date(b.date) : b.date;

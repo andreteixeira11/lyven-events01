@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,15 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Lock, Eye, EyeOff, Shield, Smartphone } from 'lucide-react-native';
 import BackButton from '@/components/BackButton';
 import { COLORS } from '@/constants/colors';
+import { supabase } from '@/lib/supabase';
+import * as LocalAuthentication from 'expo-local-authentication';
+import QRCode from '@/components/QRCode';
 
 export default function Security() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -27,6 +31,30 @@ export default function Security() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [twoFactorModalVisible, setTwoFactorModalVisible] = useState(false);
+  const [totpSecret, setTotpSecret] = useState('');
+  const [totpUri, setTotpUri] = useState('');
+  const [pendingFactorId, setPendingFactorId] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState('');
+
+  const loadSecuritySettings = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user.user_metadata?.biometric_enabled) {
+        setBiometricEnabled(true);
+      }
+      const { data: factors, error } = await supabase.auth.mfa.listFactors();
+      if (!error && factors?.all.some((f) => f.status === 'verified')) {
+        setTwoFactorEnabled(true);
+      }
+    } catch (err) {
+      console.error('[security] load settings:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadSecuritySettings();
+  }, [loadSecuritySettings]);
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -47,7 +75,24 @@ export default function Security() {
     setIsLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user.email) {
+        Alert.alert('Sessão Necessária', 'Inicia sessão para alterares a tua palavra-passe.');
+        return;
+      }
+
+      // Confirma a palavra-passe atual antes de permitir a alteração
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: session.user.email,
+        password: currentPassword,
+      });
+      if (verifyError) {
+        Alert.alert('Erro', 'A palavra-passe atual está incorreta.');
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
 
       Alert.alert('Sucesso', 'Palavra-passe alterada com sucesso!', [
         {
@@ -59,8 +104,50 @@ export default function Security() {
           },
         },
       ]);
-    } catch {
+    } catch (err) {
+      console.error('[security] change password:', err);
       Alert.alert('Erro', 'Não foi possível alterar a palavra-passe');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const startTwoFactorEnrollment = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: 'totp',
+        friendlyName: 'Lyven',
+      });
+      if (error) throw error;
+      if (!data.totp) throw new Error('Resposta inesperada do servidor.');
+      setPendingFactorId(data.id);
+      setTotpSecret(data.totp.secret);
+      setTotpUri(data.totp.uri);
+      setVerificationCode('');
+      setTwoFactorModalVisible(true);
+    } catch (err: any) {
+      console.error('[security] 2FA enroll:', err);
+      Alert.alert('Erro', err?.message || 'Não foi possível iniciar a configuração da autenticação de dois fatores.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const disableTwoFactor = async () => {
+    setIsLoading(true);
+    try {
+      const { data: factors, error } = await supabase.auth.mfa.listFactors();
+      if (error) throw error;
+      for (const factor of factors?.all ?? []) {
+        const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
+        if (unenrollError) throw unenrollError;
+      }
+      setTwoFactorEnabled(false);
+      Alert.alert('Sucesso', 'Autenticação de dois fatores desativada.');
+    } catch (err: any) {
+      console.error('[security] 2FA disable:', err);
+      Alert.alert('Erro', err?.message || 'Não foi possível desativar a autenticação de dois fatores.');
     } finally {
       setIsLoading(false);
     }
@@ -68,43 +155,86 @@ export default function Security() {
 
   const handleToggleTwoFactor = (value: boolean) => {
     if (value) {
-      Alert.alert(
-        'Ativar Autenticação de Dois Fatores',
-        'Será enviado um código de verificação para o seu email.',
-        [
-          {
-            text: 'Cancelar',
-            style: 'cancel',
-          },
-          {
-            text: 'Ativar',
-            onPress: () => setTwoFactorEnabled(true),
-          },
-        ]
-      );
+      void startTwoFactorEnrollment();
     } else {
       Alert.alert(
         'Desativar Autenticação de Dois Fatores',
         'Tem certeza que deseja desativar esta funcionalidade de segurança?',
         [
-          {
-            text: 'Cancelar',
-            style: 'cancel',
-          },
-          {
-            text: 'Desativar',
-            style: 'destructive',
-            onPress: () => setTwoFactorEnabled(false),
-          },
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Desativar', style: 'destructive', onPress: () => void disableTwoFactor() },
         ]
       );
     }
   };
 
-  const handleToggleBiometric = (value: boolean) => {
-    setBiometricEnabled(value);
+  const handleVerifyTwoFactor = async () => {
+    if (!pendingFactorId) return;
+    const code = verificationCode.replace(/\D/g, '');
+    if (code.length !== 6) {
+      Alert.alert('Erro', 'Introduz o código de 6 dígitos da aplicação autenticadora.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId: pendingFactorId,
+      });
+      if (challengeError) throw challengeError;
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: pendingFactorId,
+        challengeId: challengeData.id,
+        code,
+      });
+      if (verifyError) throw verifyError;
+      setTwoFactorEnabled(true);
+      setTwoFactorModalVisible(false);
+      setPendingFactorId(null);
+      Alert.alert('Sucesso', 'Autenticação de dois fatores ativada!');
+    } catch (err: any) {
+      console.error('[security] 2FA verify:', err);
+      Alert.alert('Erro', err?.message || 'Código inválido. Tenta novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelTwoFactorModal = async () => {
+    setTwoFactorModalVisible(false);
+    if (pendingFactorId) {
+      try {
+        await supabase.auth.mfa.unenroll({ factorId: pendingFactorId });
+      } catch (err) {
+        console.error('[security] 2FA cancel unenroll:', err);
+      }
+      setPendingFactorId(null);
+    }
+  };
+
+  const handleToggleBiometric = async (value: boolean) => {
     if (value) {
-      Alert.alert('Sucesso', 'Autenticação biométrica ativada');
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      if (!hasHardware || !isEnrolled) {
+        Alert.alert('Indisponível', 'Este dispositivo não tem biometria configurada (Face ID ou impressão digital).');
+        return;
+      }
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Confirma para ativar a autenticação biométrica',
+      });
+      if (!result.success) return;
+    }
+    setBiometricEnabled(value);
+    try {
+      const { error } = await supabase.auth.updateUser({ data: { biometric_enabled: value } });
+      if (error) throw error;
+      if (value) {
+        Alert.alert('Sucesso', 'Autenticação biométrica ativada.');
+      }
+    } catch (err) {
+      console.error('[security] biometric toggle:', err);
+      setBiometricEnabled(!value);
+      Alert.alert('Erro', 'Não foi possível guardar a definição. Tenta novamente.');
     }
   };
 
@@ -207,7 +337,7 @@ export default function Security() {
 
           <TouchableOpacity
             style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleChangePassword}
+            onPress={() => void handleChangePassword()}
             disabled={isLoading}
           >
             {isLoading ? (
@@ -259,7 +389,7 @@ export default function Security() {
             </View>
             <Switch
               value={biometricEnabled}
-              onValueChange={handleToggleBiometric}
+              onValueChange={(value) => void handleToggleBiometric(value)}
               trackColor={{ false: COLORS.border, true: COLORS.primary }}
               thumbColor={COLORS.white}
             />
@@ -278,6 +408,60 @@ export default function Security() {
       </ScrollView>
 
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={twoFactorModalVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => void handleCancelTwoFactorModal()}
+      >
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalTitle}>Autenticação de Dois Fatores</Text>
+          <Text style={styles.modalSubtitle}>
+            1. Abre a tua aplicação autenticadora (Google Authenticator, Authy, etc.){'\n'}
+            2. Lê o código QR ou introduz a chave manualmente{'\n'}
+            3. Introduz o código de 6 dígitos gerado
+          </Text>
+          {totpUri ? (
+            <View style={styles.qrWrap}>
+              <QRCode value={totpUri} size={200} />
+            </View>
+          ) : null}
+          <View style={styles.secretBox}>
+            <Text style={styles.secretLabel}>Chave manual</Text>
+            <Text style={styles.secretValue}>{totpSecret}</Text>
+          </View>
+          <TextInput
+            style={styles.codeInput}
+            value={verificationCode}
+            onChangeText={(text) => setVerificationCode(text.replace(/\D/g, '').slice(0, 6))}
+            placeholder="000000"
+            placeholderTextColor={COLORS.border}
+            keyboardType="number-pad"
+            maxLength={6}
+          />
+          <TouchableOpacity
+            style={[styles.button, isLoading && styles.buttonDisabled]}
+            onPress={() => void handleVerifyTwoFactor()}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <>
+                <Shield size={20} color={COLORS.white} />
+                <Text style={styles.buttonText}>Verificar e Ativar</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.modalCancelButton}
+            onPress={() => void handleCancelTwoFactorModal()}
+          >
+            <Text style={styles.modalCancelText}>Cancelar</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -403,5 +587,67 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: 40,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold' as const,
+    color: COLORS.black,
+    marginBottom: 12,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: COLORS.black,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  qrWrap: {
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  secretBox: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  secretLabel: {
+    fontSize: 12,
+    color: COLORS.black,
+    marginBottom: 4,
+  },
+  secretValue: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: COLORS.black,
+  },
+  codeInput: {
+    backgroundColor: COLORS.background,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 16,
+    fontSize: 20,
+    letterSpacing: 8,
+    textAlign: 'center',
+    color: COLORS.black,
+    marginBottom: 16,
+  },
+  modalCancelButton: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: COLORS.primary,
   },
 });

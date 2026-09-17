@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, Platform, Alert, ActionSheetIOS } from "react-native";
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, Platform, Alert, ActionSheetIOS, Share } from "react-native";
 import { EventImage } from "@/components/EventImage";
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import { Calendar, MapPin, ChevronLeft, Share2, Heart, Bell, Clock, Instagram, Facebook, Globe, UserPlus } from "lucide-react-native";
@@ -6,11 +6,10 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { api } from "@/lib/api";
 import { handleError } from "@/lib/error-handler";
 import { LoadingSpinner, ErrorState } from "@/components/LoadingStates";
-import { LinearGradient } from "expo-linear-gradient";
 import { useCart } from "@/hooks/cart-context";
 import { useFavorites } from "@/hooks/favorites-context";
 import { useCalendar } from "@/hooks/calendar-context";
-import { shareEvent as shareEventUtil, shareEventWithImage } from '@/lib/share-utils';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/theme-context';
 import { useUser } from '@/hooks/user-context';
@@ -298,94 +297,35 @@ export default function EventDetailScreen() {
   
   const handleShare = async () => {
     if (!event) return;
-    
-    const minPrice = Math.min(...event.ticketTypes.map(t => t.price));
-    const shareParams = {
-      eventId: event.id,
-      eventTitle: event.title,
-      eventDescription: event.description,
-      eventImage: event.image,
-      eventDate: event.date,
-      eventVenue: `${event.venue.name}, ${event.venue.city}`,
-      eventPrice: minPrice,
-      imageUri: event.image,
-    };
-    
-    const shareOptions = [
-      'WhatsApp',
-      'Facebook', 
-      'Instagram',
-      'Twitter',
-      'Outro',
-      'Copiar Link',
-      'Cancelar'
-    ];
-    
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: shareOptions,
-          cancelButtonIndex: shareOptions.length - 1,
-          title: 'Partilhar Evento'
-        },
-        (buttonIndex) => {
-          if (buttonIndex === shareOptions.length - 1) return;
-          
-          if (buttonIndex === 4) {
-            void shareEventWithImage(shareParams);
-            return;
-          }
-          
-          const platforms: ('whatsapp' | 'facebook' | 'instagram' | 'twitter' | 'copy')[] = [
-            'whatsapp', 'facebook', 'instagram', 'twitter', 'copy'
-          ];
-          
-          void shareEventUtil({
-            ...shareParams,
-            platform: platforms[buttonIndex]
-          });
+
+    const eventUrl = `https://www.lyven.pt/event/${event.id}`;
+    const shareMessage = `\U0001F389 ${event.title}\n\U0001F4C5 ${formatDate(event.date)}\n\U0001F4CD ${event.venue.name}, ${event.venue.city}\n\n\U0001F3AB Compra os teus bilhetes aqui:\n${eventUrl}`;
+
+    try {
+      if (Platform.OS === 'web') {
+        const nav = globalThis as any;
+        if (nav.navigator?.share) {
+          await nav.navigator.share({ title: event.title, text: shareMessage, url: eventUrl });
+        } else {
+          await Clipboard.setStringAsync(eventUrl);
+          Alert.alert('Link Copiado', 'O link do evento foi copiado!');
         }
-      );
-    } else if (Platform.OS === 'android') {
-      Alert.alert(
-        'Partilhar Evento',
-        'Escolhe onde queres partilhar:',
-        [
-          {
-            text: 'WhatsApp',
-            onPress: () => void shareEventUtil({ ...shareParams, platform: 'whatsapp' })
-          },
-          {
-            text: 'Facebook',
-            onPress: () => void shareEventUtil({ ...shareParams, platform: 'facebook' })
-          },
-          {
-            text: 'Instagram',
-            onPress: () => void shareEventUtil({ ...shareParams, platform: 'instagram' })
-          },
-          {
-            text: 'Twitter/X',
-            onPress: () => void shareEventUtil({ ...shareParams, platform: 'twitter' })
-          },
-          {
-            text: 'Outro',
-            onPress: () => void shareEventWithImage(shareParams)
-          },
-          {
-            text: 'Copiar Link',
-            onPress: () => void shareEventUtil({ ...shareParams, platform: 'copy' })
-          },
-          {
-            text: 'Cancelar',
-            style: 'cancel'
-          }
-        ]
-      );
-    } else {
-      await shareEventWithImage(shareParams);
+        return;
+      }
+
+      // A folha de partilha nativa cobre WhatsApp, Facebook, Instagram, X, email, etc.
+      await Share.share({
+        title: event.title,
+        message: shareMessage,
+        ...(Platform.OS === 'ios' ? { url: eventUrl } : {}),
+      });
+    } catch (error: any) {
+      if (error?.message?.includes('cancel')) return;
+      console.error('Error sharing event:', error);
+      Alert.alert('Erro', 'N\u00e3o foi poss\u00edvel partilhar o evento. Tenta novamente.');
     }
   };
-  
+
   const handleAddToCalendar = async () => {
     if (!event) return;
     
@@ -456,12 +396,33 @@ export default function EventDetailScreen() {
   
 
   
-  const handleInviteFriends = () => {
-    Alert.alert(
-      'Convidar Amigos',
-      'Esta funcionalidade estará disponível em breve!',
-      [{ text: 'OK' }]
-    );
+  const handleInviteFriends = async () => {
+    if (!event) return;
+
+    const eventUrl = `https://www.lyven.pt/event/${event.id}`;
+    const inviteMessage = `Ol\u00e1! \U0001F389 Vou ao evento "${event.title}" e queria contar contigo!\n\n\U0001F4C5 ${formatDate(event.date)}\n\U0001F4CD ${event.venue.name}, ${event.venue.city}\n\nVem comigo \u2014 bilhetes aqui:\n${eventUrl}`;
+
+    try {
+      if (Platform.OS === 'web') {
+        const nav = globalThis as any;
+        if (nav.navigator?.share) {
+          await nav.navigator.share({ title: `Convite: ${event.title}`, text: inviteMessage });
+        } else {
+          await Clipboard.setStringAsync(inviteMessage);
+          Alert.alert('Convite Copiado', 'A mensagem de convite foi copiada!');
+        }
+        return;
+      }
+
+      await Share.share({
+        title: `Convite: ${event.title}`,
+        message: inviteMessage,
+        ...(Platform.OS === 'ios' ? { url: eventUrl } : {}),
+      });
+    } catch (error: any) {
+      if (error?.message?.includes('cancel')) return;
+      console.error('Error inviting friends:', error);
+    }
   };
 
   return (
@@ -471,10 +432,6 @@ export default function EventDetailScreen() {
         {/* Hero Image */}
         <View style={styles.heroContainer}>
           <EventImage uri={event.image} style={styles.heroImage} />
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.8)']}
-            style={styles.heroGradient}
-          />
           
           {/* Header Actions */}
           <SafeAreaView style={styles.headerActions}>
@@ -495,24 +452,25 @@ export default function EventDetailScreen() {
             </View>
           </SafeAreaView>
           
-          {/* Title and Date Overlay */}
-          <View style={styles.heroOverlay}>
+        </View>
+
+        {/* Content */}
+        <View style={[styles.content, { backgroundColor: colors.background }]}>
+          {/* Title and Date (below the poster) */}
+          <View style={styles.titleBlock}>
             {isFreeEvent(event) && (
               <View style={styles.heroFreeBadge}>
                 <FreeBadge size="md" />
               </View>
             )}
-            <Text style={styles.heroTitle}>{event.title}</Text>
+            <Text style={[styles.eventTitleText, { color: colors.text }]}>{event.title}</Text>
             <View style={styles.heroDateRow}>
-              <Calendar size={16} color="#fff" />
-              <Text style={styles.heroDate}>{formatDate(event.date)}{formatEndInfo(event.date, event.endDate)}</Text>
+              <Calendar size={16} color={colors.primary} />
+              <Text style={[styles.eventDateText, { color: colors.textSecondary }]}>{formatDate(event.date)}{formatEndInfo(event.date, event.endDate)}</Text>
             </View>
           </View>
-        </View>
 
-        {/* Content */}
-        <View style={[styles.content, { backgroundColor: colors.background }]}>
-          {/* Social Proof */}
+          {/* Social Proof */}          {/* Social Proof */}
           {typeof id === 'string' && <SocialProof eventId={id} />}
 
           {/* FOMO Alert */}
@@ -845,39 +803,23 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  heroGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 150,
-  },
-  heroOverlay: {
-    position: 'absolute',
-    bottom: responsiveSpacing(20),
-    left: responsiveSpacing(20),
-    right: responsiveSpacing(20),
-  },
-  heroTitle: {
-    fontSize: responsiveFontSize(28),
-    fontWeight: 'bold' as const,
-    color: '#fff',
-    marginBottom: responsiveSpacing(8),
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
-  },
   heroDateRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  heroDate: {
+  titleBlock: {
+    paddingHorizontal: responsiveSpacing(20),
+    paddingTop: responsiveSpacing(16),
+  },
+  eventTitleText: {
+    fontSize: responsiveFontSize(26),
+    fontWeight: 'bold' as const,
+    lineHeight: responsiveFontSize(32),
+    marginBottom: responsiveSpacing(8),
+  },
+  eventDateText: {
     fontSize: responsiveFontSize(14),
-    color: '#fff',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
   },
   headerActions: {
     position: 'absolute',

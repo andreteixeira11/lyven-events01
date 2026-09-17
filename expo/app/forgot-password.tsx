@@ -15,6 +15,7 @@ import { Mail, Check } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { COLORS, RADIUS, SPACING, SHADOWS } from '@/constants/colors';
 import { useTheme } from '@/hooks/theme-context';
+import { supabase } from '@/lib/supabase';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -37,9 +38,11 @@ export default function ForgotPasswordScreen() {
     setIsLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const origin = Platform.OS === 'web' ? (globalThis as any).location?.origin || '' : '';
+      const redirectTo = Platform.OS === 'web' ? `${origin}/reset-password` : 'lyven://reset-password';
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+      if (error) throw error;
       
-      console.log('Enviando email de recuperação para:', email);
       setEmailSent(true);
       
       Alert.alert(
