@@ -43,7 +43,18 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
-        return this.props.fallback;
+        return (
+          <View style={styles.fallbackWrapper}>
+            {this.props.fallback}
+            {__DEV__ && this.state.error ? (
+              <View style={styles.devErrorBox} pointerEvents="none">
+                <Text style={styles.devErrorText} numberOfLines={10}>
+                  {this.state.error?.toString?.() || 'Unknown error'}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        );
       }
 
       return (
@@ -97,6 +108,25 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
 }
 
 const styles = StyleSheet.create({
+  fallbackWrapper: {
+    flex: 1,
+  },
+  devErrorBox: {
+    position: 'absolute',
+    bottom: 24,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#F87171',
+  },
+  devErrorText: {
+    fontSize: 12,
+    color: '#F87171',
+    fontFamily: 'monospace',
+  },
   container: {
     flex: 1,
     backgroundColor: '#0F0F0F',

@@ -135,6 +135,7 @@ export default function EventDetailScreen() {
   }
 
   const formatDate = (date: Date) => {
+    if (!date || isNaN(date.getTime())) return 'Data a definir';
     return new Intl.DateTimeFormat('pt-PT', {
       weekday: 'long',
       day: 'numeric',
@@ -147,7 +148,8 @@ export default function EventDetailScreen() {
 
   /** End-time suffix for the hero date, e.g. " – 02:00" or " até 18 set, 02:00". */
   const formatEndInfo = (start: Date, end?: Date): string => {
-    if (!end) return '';
+    if (!end || isNaN(end.getTime())) return '';
+    if (isNaN(start?.getTime?.() ?? NaN)) return '';
     const hasTime = end.getHours() !== 0 || end.getMinutes() !== 0;
     if (!hasTime) return '';
     const sameDay = start.toDateString() === end.toDateString();
