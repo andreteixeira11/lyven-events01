@@ -472,7 +472,7 @@ export default function EventDetailScreen() {
             </View>
           </View>
 
-          {/* Social Proof */}          {/* Social Proof */}
+          {/* Social Proof */}
           {typeof id === 'string' && <SocialProof eventId={id} />}
 
           {/* FOMO Alert */}
