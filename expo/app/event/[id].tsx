@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
   },
   titleBlock: {
     paddingHorizontal: responsiveSpacing(20),
-    paddingTop: responsiveSpacing(16),
+    paddingTop: responsiveSpacing(6),
   },
   eventTitleText: {
     fontSize: responsiveFontSize(26),
@@ -848,6 +848,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: responsiveSpacing(20),
+    paddingTop: responsiveSpacing(10),
     backgroundColor: '#FFFFFF',
   },
   titleSection: {
