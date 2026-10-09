@@ -28,23 +28,36 @@ export default function ResetPasswordScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const tokenHashParam = params.token_hash ? String(params.token_hash) : undefined;
+  const codeParam = params.code ? String(params.code) : undefined;
+
   useEffect(() => {
+    // Verification is one-shot: once it succeeds or fails, stop reacting to param updates.
+    if (isVerified || errorMessage) return;
+
+    // On cold start via deep link the params can land slightly after the first
+    // render — wait briefly before declaring the link invalid.
+    if (!tokenHashParam && !codeParam) {
+      const timer = setTimeout(() => {
+        setErrorMessage('Link inválido ou expirado. Solicita um novo email de recuperação.');
+        setIsVerifying(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+
     const verifyRecoveryLink = async () => {
       try {
-        if (params.token_hash) {
+        if (tokenHashParam) {
           const { error } = await supabase.auth.verifyOtp({
             type: 'recovery',
-            token_hash: String(params.token_hash),
+            token_hash: tokenHashParam,
           });
           if (error) throw error;
-          setIsVerified(true);
-        } else if (params.code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(String(params.code));
+        } else if (codeParam) {
+          const { error } = await supabase.auth.exchangeCodeForSession(codeParam);
           if (error) throw error;
-          setIsVerified(true);
-        } else {
-          throw new Error('Link inválido ou expirado.');
         }
+        setIsVerified(true);
       } catch (err: any) {
         console.error('[reset-password] verify link:', err);
         setErrorMessage(err?.message || 'Link inválido ou expirado. Solicita um novo email de recuperação.');
@@ -53,8 +66,7 @@ export default function ResetPasswordScreen() {
       }
     };
     void verifyRecoveryLink();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tokenHashParam, codeParam, isVerified, errorMessage]);
 
   const handleSubmit = async () => {
     if (password.length < 8) {

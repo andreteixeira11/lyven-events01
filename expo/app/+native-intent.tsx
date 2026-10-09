@@ -8,14 +8,16 @@
  */
 export function redirectSystemPath({
   path,
-  initial,
 }: {
   path: string;
   initial: boolean;
 }) {
   try {
     if (path.includes('reset-password')) {
-      return path;
+      // Normalize `lyven://reset-password?query` to `/reset-password?query`
+      // so expo-router parses the route AND its query params.
+      const withoutScheme = path.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
+      return withoutScheme.startsWith('/') ? withoutScheme : `/${withoutScheme}`;
     }
   } catch {
     // fall through to the default below
