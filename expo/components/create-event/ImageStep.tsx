@@ -8,7 +8,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import { Image as ImageIcon, Upload, Link2 } from 'lucide-react-native';
+import { Image as ImageIcon, Upload, Link2, Info } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 interface ImageStepProps {
@@ -64,6 +64,13 @@ export default function ImageStep({
       <View style={styles.inputLabel}>
         <ImageIcon size={20} color="#0099a8" />
         <Text style={styles.inputLabelText}>Imagem do Evento *</Text>
+      </View>
+
+      <View style={styles.specBox}>
+        <Info size={16} color="#0099a8" />
+        <Text style={styles.specText}>
+          Formatos aceites: JPG, PNG ou WebP · Proporção 16:9 (recomendado 1200×675 px ou superior) · Tamanho máximo: 5 MB
+        </Text>
       </View>
       
       <View style={styles.imageModeSelector}>
@@ -147,6 +154,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600' as const,
     color: '#333',
+  },
+  specBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#f0fafb',
+    borderWidth: 1,
+    borderColor: '#b3e0e5',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  specText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#007a87',
   },
   imageModeSelector: {
     flexDirection: 'row',

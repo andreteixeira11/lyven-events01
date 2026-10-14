@@ -167,6 +167,20 @@ export default function EventDetailScreen() {
     return ` até ${endDate}`;
   };
 
+  /** Compact schedule for the info card row, e.g. "sex., 25 set 2026 · 22:30 – 02:30". */
+  const formatSchedule = (start: Date, end?: Date): string => {
+    if (!start || isNaN(start.getTime())) return 'Data a definir';
+    const base = new Intl.DateTimeFormat('pt-PT', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(start);
+    return base + formatEndInfo(start, end);
+  };
+
   const handleTicketChange = (ticketId: string, change: number) => {
     if (Platform.OS !== 'web') {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -501,6 +515,13 @@ export default function EventDetailScreen() {
           {/* Event Info */}
           <View style={[styles.infoSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.infoItem}>
+              <Clock size={20} color={colors.primary} />
+              <View style={styles.infoContent}>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Data e Hora</Text>
+                <Text style={[styles.infoText, { color: colors.text }]}>{formatSchedule(event.date, event.endDate)}</Text>
+              </View>
+            </View>
+            <View style={styles.infoItem}>
               <MapPin size={20} color={colors.primary} />
               <View style={styles.infoContent}>
                 <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Local</Text>
@@ -508,8 +529,6 @@ export default function EventDetailScreen() {
                 <Text style={[styles.infoSubtext, { color: colors.textSecondary }]}>{[event.venue.address, event.venue.city].filter(Boolean).join(', ')}</Text>
               </View>
             </View>
-            
-
           </View>
 
           {/* Quick Actions */}

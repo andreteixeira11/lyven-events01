@@ -16,9 +16,22 @@ import { useQueryClient } from '@tanstack/react-query';
 import BackButton from '@/components/BackButton';
 import LoginSheet from '@/components/LoginSheet';
 import { calculateCartCommission, COMMISSION_TIERS_DESCRIPTION } from '@/utils/commission';
+import { supabase } from '@/lib/supabase';
 
 type PaymentMethod = 'card' | 'mbway' | 'multibanco';
 type CheckoutStep = 'review' | 'payment' | 'confirm';
+
+/** Valida um NIF português: 9 dígitos, dígito de controlo por módulo 11. */
+const isValidPortugueseNif = (value: string): boolean => {
+  const nif = value.replace(/\s/g, '');
+  if (!/^[0-9]{9}$/.test(nif)) return false;
+  if (!['1', '2', '5', '6', '8', '9'].includes(nif[0])) return false;
+  let sum = 0;
+  for (let i = 0; i < 8; i++) sum += Number(nif[i]) * (9 - i);
+  const mod = sum % 11;
+  const checkDigit = mod < 2 ? 0 : 11 - mod;
+  return checkDigit === Number(nif[8]);
+};
 
 export default function CheckoutScreen() {
   const { cartItems, getTotalPrice, clearCart, removeFromCart, updateQuantity } = useCart();
@@ -31,6 +44,7 @@ export default function CheckoutScreen() {
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('card');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showLoginSheet, setShowLoginSheet] = useState(false);
+  const [nif, setNif] = useState('');
 
   // Regresso do Stripe na web: ?session_id=... na própria página.
   const params = useLocalSearchParams<{ session_id?: string; stripe_cancel?: string }>();
@@ -54,6 +68,22 @@ export default function CheckoutScreen() {
 
   const animateStepChange = useCallback((newStep: CheckoutStep) => {
     setCurrentStep(newStep);
+  }, []);
+
+  // Prefill do NIF guardado na conta (user_metadata) — o campo é opcional.
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const saved = data.user?.user_metadata?.nif;
+        if (saved) setNif(String(saved));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const { data: eventsData, isLoading: isLoadingEvents, error: eventsError, refetch: refetchEvents } = api.events.list.useQuery(
@@ -155,9 +185,26 @@ export default function CheckoutScreen() {
     }
     if (cartItems.length === 0) return;
 
+    // NIF opcional: só valida se o utilizador o preencheu.
+    const trimmedNif = nif.trim();
+    if (trimmedNif && !isValidPortugueseNif(trimmedNif)) {
+      Alert.alert(
+        'NIF inválido',
+        'O NIF deve ter 9 dígitos válidos. Se não quiseres indicar NIF, deixa o campo vazio.'
+      );
+      return;
+    }
+
     setIsProcessing(true);
     if (Platform.OS !== 'web') {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+
+    // Guarda o NIF na conta para futuras faturas (silencioso — não bloqueia a compra).
+    if (trimmedNif) {
+      void supabase.auth
+        .updateUser({ data: { nif: trimmedNif } })
+        .catch((err) => console.warn('[checkout] Falha ao guardar NIF:', err));
     }
 
     try {
@@ -605,6 +652,26 @@ export default function CheckoutScreen() {
       <Text style={[styles.sectionTitle, { color: colors.text }]}>
         {isFreeCheckout ? 'Confirmar Bilhetes' : 'Confirmar Compra'}
       </Text>
+
+      <View style={[styles.summaryCard, { backgroundColor: colors.card }, SHADOWS.md]}>
+        <Text style={[styles.summaryTitle, { color: colors.text }]}>Dados Fiscais (opcional)</Text>
+        <Text style={[styles.nifHint, { color: colors.textSecondary }]}>
+          Se quiseres fatura com o teu número de contribuinte, adiciona-o aqui —
+          podes deixar vazio.
+        </Text>
+        <TextInput
+          style={[
+            styles.nifInput,
+            { borderColor: colors.border, color: colors.text, backgroundColor: colors.background },
+          ]}
+          value={nif}
+          onChangeText={(text) => setNif(text.replace(/[^0-9]/g, '').slice(0, 9))}
+          placeholder="NIF (9 dígitos)"
+          placeholderTextColor={colors.textSecondary}
+          keyboardType="number-pad"
+          maxLength={9}
+        />
+      </View>
 
       <View style={[styles.summaryCard, { backgroundColor: colors.card }, SHADOWS.md]}>
         <Text style={[styles.summaryTitle, { color: colors.text }]}>Resumo do Pedido</Text>
@@ -1125,6 +1192,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700' as const,
     marginBottom: SPACING.md,
+  },
+  nifHint: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: SPACING.md,
+  },
+  nifInput: {
+    borderWidth: 1,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 12,
+    fontSize: 16,
   },
   summaryItem: {
     flexDirection: 'row',

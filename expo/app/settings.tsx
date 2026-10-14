@@ -270,14 +270,14 @@ export default function Settings() {
           <SettingItem
             icon={Shield}
             title="Privacidade e Dados"
-            subtitle="Gerir dados e privacidade"
-            onPress={() => Alert.alert('Privacidade', 'Funcionalidade em desenvolvimento')}
+            subtitle="Como tratamos os teus dados"
+            onPress={() => router.push('/privacy')}
           />
           <SettingItem
             icon={HelpCircle}
             title="Termos de Serviço"
             subtitle="Políticas e termos"
-            onPress={() => Alert.alert('Termos', 'Funcionalidade em desenvolvimento')}
+            onPress={() => router.push('/terms')}
           />
         </View>
 

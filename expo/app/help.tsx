@@ -119,10 +119,13 @@ export default function Help() {
     setExpandedFAQ(expandedFAQ === id ? null : id);
   };
 
-  const handleContactSupport = (method: 'email' | 'phone' | 'chat') => {
+  const handleContactSupport = (method: 'email' | 'promoterEmail' | 'phone' | 'chat') => {
     switch (method) {
       case 'email':
-        Linking.openURL('mailto:suporte@diceapp.com');
+        Linking.openURL('mailto:suporte@lyven.pt?subject=Ajuda%20Lyven');
+        break;
+      case 'promoterEmail':
+        Linking.openURL('mailto:promotores@lyven.pt?subject=Ajuda%20Promotores%20Lyven');
         break;
       case 'phone':
         Linking.openURL('tel:+351210000000');
@@ -257,22 +260,22 @@ export default function Help() {
         </View>
 
         <View style={[styles.contactSection, { backgroundColor: colors.card }, SHADOWS.sm]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Ainda precisa de ajuda?</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Contactos para Utilizadores</Text>
           <Text style={[styles.contactDescription, { color: colors.textSecondary }]}>
-            Nossa equipe de suporte está disponível para ajudá-lo
+            Dúvidas sobre bilhetes, compras ou conta
           </Text>
           
           <ContactCard
             icon={Mail}
             title="Email"
-            subtitle="suporte@lyven.com"
+            subtitle="suporte@lyven.pt"
             onPress={() => handleContactSupport('email')}
           />
           
           <ContactCard
             icon={Phone}
             title="Telefone"
-            subtitle="+351 21 000 0000"
+            subtitle="+351 21 000 0000 (chamada para a rede fixa nacional)"
             onPress={() => handleContactSupport('phone')}
           />
           
@@ -281,6 +284,20 @@ export default function Help() {
             title="Chat ao Vivo"
             subtitle="Disponível 24/7"
             onPress={() => handleContactSupport('chat')}
+          />
+        </View>
+
+        <View style={[styles.contactSection, { backgroundColor: colors.card }, SHADOWS.sm]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Contactos para Promotores</Text>
+          <Text style={[styles.contactDescription, { color: colors.textSecondary }]}>
+            Apoio na criação e gestão de eventos, pagamentos e aprovações
+          </Text>
+          
+          <ContactCard
+            icon={Mail}
+            title="Email Promotores"
+            subtitle="promotores@lyven.pt"
+            onPress={() => handleContactSupport('promoterEmail')}
           />
         </View>
 
