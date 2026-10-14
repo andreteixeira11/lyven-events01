@@ -64,7 +64,7 @@ const SECTIONS: { icon: React.ComponentType<{ size: number; color: string }>; ti
     icon: Mail,
     title: 'Contactos',
     paragraphs: [
-      'Para exerceres os teus direitos ou esclareceres dúvidas sobre privacidade, escreve para privacidade@lyven.pt.',
+      'Para exerceres os teus direitos ou esclareceres dúvidas sobre privacidade, escreve para info@lyven.pt.',
     ],
   },
 ];

@@ -119,16 +119,13 @@ export default function Help() {
     setExpandedFAQ(expandedFAQ === id ? null : id);
   };
 
-  const handleContactSupport = (method: 'email' | 'promoterEmail' | 'phone' | 'chat') => {
+  const handleContactSupport = (method: 'email' | 'phone' | 'chat') => {
     switch (method) {
       case 'email':
-        Linking.openURL('mailto:suporte@lyven.pt?subject=Ajuda%20Lyven');
-        break;
-      case 'promoterEmail':
-        Linking.openURL('mailto:promotores@lyven.pt?subject=Ajuda%20Promotores%20Lyven');
+        Linking.openURL('mailto:info@lyven.pt?subject=Ajuda%20Lyven');
         break;
       case 'phone':
-        Linking.openURL('tel:+351210000000');
+        Linking.openURL('tel:+351964927026');
         break;
       case 'chat':
         Alert.alert('Chat', 'Funcionalidade de chat em desenvolvimento');
@@ -260,22 +257,22 @@ export default function Help() {
         </View>
 
         <View style={[styles.contactSection, { backgroundColor: colors.card }, SHADOWS.sm]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Contactos para Utilizadores</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Contactos</Text>
           <Text style={[styles.contactDescription, { color: colors.textSecondary }]}>
-            Dúvidas sobre bilhetes, compras ou conta
+            Para utilizadores e promotores — dúvidas sobre bilhetes, compras, conta ou eventos
           </Text>
           
           <ContactCard
             icon={Mail}
             title="Email"
-            subtitle="suporte@lyven.pt"
+            subtitle="info@lyven.pt"
             onPress={() => handleContactSupport('email')}
           />
           
           <ContactCard
             icon={Phone}
             title="Telefone"
-            subtitle="+351 21 000 0000 (chamada para a rede fixa nacional)"
+            subtitle="+351 964 927 026 (chamada para a rede móvel nacional)"
             onPress={() => handleContactSupport('phone')}
           />
           
@@ -287,24 +284,13 @@ export default function Help() {
           />
         </View>
 
-        <View style={[styles.contactSection, { backgroundColor: colors.card }, SHADOWS.sm]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Contactos para Promotores</Text>
-          <Text style={[styles.contactDescription, { color: colors.textSecondary }]}>
-            Apoio na criação e gestão de eventos, pagamentos e aprovações
-          </Text>
-          
-          <ContactCard
-            icon={Mail}
-            title="Email Promotores"
-            subtitle="promotores@lyven.pt"
-            onPress={() => handleContactSupport('promoterEmail')}
-          />
-        </View>
-
         <View style={[styles.resourcesSection, { backgroundColor: colors.card }, SHADOWS.sm]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Recursos Adicionais</Text>
           
-          <TouchableOpacity style={[styles.resourceItem, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.resourceItem, { borderBottomColor: colors.border }]}
+            onPress={() => router.push('/privacy')}
+          >
             <Shield size={20} color={colors.info} />
             <View style={styles.resourceContent}>
               <Text style={[styles.resourceTitle, { color: colors.text }]}>Política de Privacidade</Text>
@@ -313,7 +299,10 @@ export default function Help() {
             <ExternalLink size={16} color={colors.textSecondary} />
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.resourceItem, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.resourceItem, { borderBottomColor: colors.border }]}
+            onPress={() => router.push('/terms')}
+          >
             <Book size={20} color={colors.success} />
             <View style={styles.resourceContent}>
               <Text style={[styles.resourceTitle, { color: colors.text }]}>Termos de Uso</Text>

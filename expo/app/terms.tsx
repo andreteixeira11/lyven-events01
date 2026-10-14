@@ -61,7 +61,7 @@ const SECTIONS: { icon: React.ComponentType<{ size: number; color: string }>; ti
     title: '5. Cancelamentos e reembolsos',
     paragraphs: [
       'A política de cancelamento de cada evento é da responsabilidade do promotor e está indicada na página do evento. Se um evento for cancelado, o valor dos bilhetes é reembolsado pelo respetivo promotor.',
-      'Em caso de dúvida sobre um reembolso, contacta-nos em suporte@lyven.pt.',
+      'Em caso de dúvida sobre um reembolso, contacta-nos em info@lyven.pt.',
     ],
   },
   {
@@ -89,7 +89,7 @@ const SECTIONS: { icon: React.ComponentType<{ size: number; color: string }>; ti
     icon: Mail,
     title: '9. Contacto',
     paragraphs: [
-      'Questões sobre estes Termos: geral@lyven.pt · Apoio a promotores: promotores@lyven.pt.',
+      'Questões sobre estes Termos: info@lyven.pt.',
     ],
   },
 ];
