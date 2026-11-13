@@ -21,6 +21,11 @@ import { isBaltazarDiasVenue } from '@/constants/venue-seat-maps';
 import { FreeBadge, isFreeEvent } from '@/components/FreeBadge';
 import { useQueryClient } from '@tanstack/react-query';
 import BackButton from '@/components/BackButton';
+import { supabase } from '@/lib/supabase';
+
+/** Evita contar visitas duplicadas do mesmo evento na mesma sessão da app. */
+const VIEWED_EVENT_IDS = new Set<string>();
+const VIEW_SESSION_ID = `s_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
 
 
 export default function EventDetailScreen() {
@@ -133,6 +138,21 @@ export default function EventDetailScreen() {
       </View>
     );
   }
+
+  // Rastreio de visitas à página do evento (ignora remounts na mesma sessão).
+  useEffect(() => {
+    if (typeof id !== 'string' || !id) return;
+    if (VIEWED_EVENT_IDS.has(id)) return;
+    VIEWED_EVENT_IDS.add(id);
+    void (async () => {
+      const { error } = await supabase
+        .rpc('record_event_view', { p_event_id: id, p_session_id: VIEW_SESSION_ID });
+      if (error) {
+        console.warn('[event] Falha ao registar visita:', error.message);
+        VIEWED_EVENT_IDS.delete(id);
+      }
+    })().catch(() => VIEWED_EVENT_IDS.delete(id));
+  }, [id]);
 
   const formatDate = (date: Date) => {
     if (!date || isNaN(date.getTime())) return 'Data a definir';

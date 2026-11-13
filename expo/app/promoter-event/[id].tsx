@@ -23,12 +23,15 @@ import {
   TrendingUp,
   Download,
   ChevronRight,
+  Eye,
 } from 'lucide-react-native';
 import { api } from '@/lib/api';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
+import { supabase } from '@/lib/supabase';
 import BackButton from '@/components/BackButton';
 
 type Section = 'buyers' | 'scanner' | 'stats';
@@ -93,6 +96,23 @@ export default function PromoterEventScreen() {
     isValidated: b.isValidated,
     validatedAt: b.validatedAt ? new Date(b.validatedAt) : undefined,
   })), [eventStats]);
+
+  // Contagem de visualizações da página do evento (tabela event_views).
+  const [viewCount, setViewCount] = useState<number | null>(null);
+  React.useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    supabase
+      .from('event_views')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', id)
+      .then(({ count }) => {
+        if (!cancelled) setViewCount(count ?? 0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   if (isLoading) {
     return (
@@ -391,6 +411,70 @@ export default function PromoterEventScreen() {
     }
   };
 
+  /** Exporta a lista de bilhetes/compradores em CSV (web: download; nativo: partilha). */
+  const handleExportCSV = async () => {
+    if (!event) return;
+    try {
+      const escapeCsv = (value: string | number): string =>
+        `"${String(value ?? '').replace(/"/g, '""')}"`;
+      const header = [
+        'Nome',
+        'Email',
+        'Telefone',
+        'Tipo de Bilhete',
+        'Quantidade',
+        'Total Pago (EUR)',
+        'Data da Compra',
+        'Estado',
+      ];
+      const rows = buyers.map((buyer) => [
+        buyer.name,
+        buyer.email,
+        buyer.phone,
+        buyer.ticketType,
+        String(buyer.quantity),
+        buyer.totalPaid.toFixed(2),
+        formatDate(buyer.purchaseDate),
+        buyer.isValidated ? 'Validado' : 'Pendente',
+      ]);
+      const csv =
+        '\ufeff' +
+        [header, ...rows].map((row) => row.map(escapeCsv).join(';')).join('\r\n');
+      const fileName = `bilhetes-${event.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/gi, '-')
+        .slice(0, 40)}-${new Date().toISOString().slice(0, 10)}.csv`;
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        Alert.alert('Sucesso', 'Bilhetes exportados em CSV!');
+      } else {
+        const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+        await FileSystem.writeAsStringAsync(fileUri, csv, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'text/csv',
+            dialogTitle: 'Exportar Bilhetes (CSV)',
+            UTI: 'public.comma-separated-values-text',
+          });
+        } else {
+          Alert.alert('Erro', 'Não é possível partilhar o ficheiro neste dispositivo');
+        }
+      }
+    } catch (err) {
+      console.error('Error exporting CSV:', err);
+      Alert.alert('Erro', 'Ocorreu um erro ao exportar o CSV');
+    }
+  };
+
   const renderBuyersSection = () => (
     <View style={styles.sectionContent}>
       <ScrollView style={styles.buyersList} showsVerticalScrollIndicator={false}>
@@ -683,6 +767,12 @@ export default function PromoterEventScreen() {
             </View>
 
             <View style={styles.largeStatCard}>
+              <Eye size={20} color="#FF9500" />
+              <Text style={styles.largeStatValue}>{viewCount ?? '—'}</Text>
+              <Text style={styles.largeStatLabel}>Visualizações da Página</Text>
+            </View>
+
+            <View style={styles.largeStatCard}>
               <TrendingUp size={20} color="#FF385C" />
               <Text style={styles.largeStatValue}>{formatCurrency(eventStats?.netToPromoter ?? 0)}</Text>
               <Text style={styles.largeStatLabel}>Líquido p/ Promotor</Text>
@@ -781,10 +871,16 @@ export default function PromoterEventScreen() {
             <BackButton onPress={() => router.back()} color="#000" backgroundColor="rgba(0,0,0,0.05)" />
           ),
           headerRight: () => (
-            <TouchableOpacity onPress={handleExportPDF} style={styles.exportButton}>
-              <Download size={20} color="#0099a8" />
-              <Text style={styles.exportButtonText}>Relatório</Text>
-            </TouchableOpacity>
+            <View style={styles.exportButtonsRow}>
+              <TouchableOpacity onPress={handleExportCSV} style={styles.exportButton}>
+                <Download size={20} color="#0099a8" />
+                <Text style={styles.exportButtonText}>CSV</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleExportPDF} style={styles.exportButton}>
+                <Download size={20} color="#0099a8" />
+                <Text style={styles.exportButtonText}>Relatório</Text>
+              </TouchableOpacity>
+            </View>
           ),
         }} 
       />
@@ -851,6 +947,10 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     marginLeft: 8,
+  },
+  exportButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   exportButton: {
     flexDirection: 'row',
