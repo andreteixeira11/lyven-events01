@@ -2,7 +2,7 @@
   "expo": {
     "name": "LYVEN",
     "slug": "lyven-events",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "lyven",
@@ -36,13 +36,12 @@
         "backgroundColor": "#ffffff"
       },
       "package": "app.rork.lyven_events",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "android.permission.VIBRATE",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.FOREGROUND_SERVICE",
-
         "android.permission.READ_CALENDAR",
         "android.permission.WRITE_CALENDAR",
         "android.permission.RECEIVE_BOOT_COMPLETED",
@@ -108,7 +107,8 @@
           "enableGooglePay": false
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": false
