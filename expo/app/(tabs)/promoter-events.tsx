@@ -193,7 +193,7 @@ function PromoterEventsContent() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={!!isRefetching && !eventsLoading} onRefresh={() => refetch()} />
+          <RefreshControl refreshing={!!isRefetching && !eventsLoading} onRefresh={() => { void refetch(); }} />
         }
       >
         {currentEvents.length > 0 ? (

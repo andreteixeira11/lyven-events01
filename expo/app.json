@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "lyven",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
     "jsEngine": "hermes",
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -108,7 +107,12 @@
         }
       ],
       "expo-sqlite",
-      "expo-web-browser"
+      "expo-web-browser",
+      "@react-native-community/datetimepicker",
+      "expo-image",
+      "expo-sharing",
+      "expo-splash-screen",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": false

@@ -28,15 +28,16 @@ export default function TabLayout() {
 
   const AnimatedTabIcon = ({ 
     Icon, 
-    color, 
+    color: colorValue, 
     focused, 
     children 
   }: { 
     Icon: any; 
-    color: string; 
+    color: unknown; 
     focused: boolean; 
     children?: React.ReactNode;
   }) => {
+    const color = typeof colorValue === 'string' ? colorValue : '#888888';
     const scaleAnim = useRef(new Animated.Value(focused ? 1 : 0.9)).current;
     const glowAnim = useRef(new Animated.Value(focused ? 1 : 0)).current;
     const slideAnim = useRef(new Animated.Value(focused ? 1 : 0)).current;

@@ -53,7 +53,7 @@ export default function VerifyEmailScreen() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [emailWarning, setEmailWarning] = useState('');
 
-  const inputRefs = useRef<TextInput[]>([]);
+  const inputRefs = useRef<React.ComponentRef<typeof TextInput>[]>([]);
 
   const shakeAnimation = useRef(new Animated.Value(0)).current;
 

@@ -59,7 +59,7 @@ export default function TicketDetailsScreen() {
   const { colors, isDark } = useTheme();
   const { user } = useUser();
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [transferModalVisible, setTransferModalVisible] = useState(false);
   const [transferEmail, setTransferEmail] = useState('');

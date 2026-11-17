@@ -72,7 +72,7 @@ export const [ThemeProvider, useTheme] = createContextHook(() => {
   const [theme, setTheme] = useState<Theme>('light');
   const [colorScheme, setColorScheme] = useState<ColorSchemeName>(() => {
     try {
-      return Appearance.getColorScheme();
+      return Appearance.getColorScheme() ?? 'light';
     } catch (error) {
       console.error('Failed to get color scheme:', error);
       return 'light';
@@ -92,7 +92,7 @@ export const [ThemeProvider, useTheme] = createContextHook(() => {
 
   useEffect(() => {
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      setColorScheme(colorScheme);
+      setColorScheme(colorScheme ?? 'light');
     });
 
     return () => subscription.remove();
