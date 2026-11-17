@@ -100,12 +100,6 @@
       ],
       "expo-localization",
       "expo-font",
-      [
-        "@stripe/stripe-react-native",
-        {
-          "enableGooglePay": false
-        }
-      ],
       "expo-sqlite",
       "expo-web-browser",
       "@react-native-community/datetimepicker",
