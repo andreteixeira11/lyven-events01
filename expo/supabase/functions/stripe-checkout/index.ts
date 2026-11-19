@@ -90,7 +90,11 @@ Deno.serve(async (req) => {
 
   try {
     if (body.action === "ping") {
-      return json({ configured: !!STRIPE_SECRET_KEY, publishableKey: null });
+      return json({
+        configured: !!STRIPE_SECRET_KEY,
+        publishableKey: null,
+        mode: STRIPE_SECRET_KEY.startsWith("sk_live_") || STRIPE_SECRET_KEY.startsWith("rk_live_") ? "live" : "test",
+      });
     }
 
     if (body.action === "status") {
