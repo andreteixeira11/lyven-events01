@@ -110,29 +110,67 @@ async function fetchTicket(ticketId: string, userId?: string): Promise<TicketDat
   return rows[0] ?? null;
 }
 
-async function fetchEvent(eventId: string) {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/events?id=eq.${eventId}&select=title,venue,address,date,end_date`,
-    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } }
-  );
-  if (!res.ok) return null;
-  const rows = await res.json();
-  return rows[0] ?? null;
+interface EventData {
+  title: string;
+  venue: string | null;
+  address: string | null;
+  date: string;
+  end_date: string | null;
+  ticket_types: unknown;
 }
 
-async function fetchTicketType(ticketId: string): Promise<string | null> {
+async function fetchEvent(eventId: string): Promise<EventData | null> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/ticket_types?id=eq.${ticketId}&select=name`,
+    `${SUPABASE_URL}/rest/v1/events?id=eq.${encodeURIComponent(eventId)}&select=title,venue_name,venue_address,venue_city,date,end_date,ticket_types`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } }
   );
-  if (!res.ok) return null;
+  if (!res.ok) {
+    console.error("wallet-pass fetchEvent:", res.status, await res.text());
+    return null;
+  }
   const rows = await res.json();
-  return rows[0]?.name ?? null;
+  const e = rows[0];
+  if (!e) return null;
+  const venueName = (e.venue_name ?? "").trim();
+  const city = (e.venue_city ?? "").trim();
+  const venue = venueName && city && venueName.toLowerCase() !== city.toLowerCase()
+    ? `${venueName}, ${city}`
+    : venueName || city || null;
+  return {
+    title: e.title,
+    venue,
+    address: (e.venue_address ?? "").trim() || null,
+    date: e.date,
+    end_date: e.end_date,
+    ticket_types: e.ticket_types,
+  };
+}
+
+/** Os tipos de bilhete estão guardados em events.ticket_types (JSON). */
+function ticketTypeName(ticketTypes: unknown, typeId: string | null): string | null {
+  if (!typeId) return null;
+  let list: unknown = ticketTypes;
+  if (typeof list === "string") {
+    try { list = JSON.parse(list); } catch { return null; }
+  }
+  if (!Array.isArray(list)) return null;
+  const found = list.find((t: { id?: unknown }) => String(t?.id) === String(typeId)) as { name?: string } | undefined;
+  return found?.name ?? null;
+}
+
+async function fetchHolderName(userId: string): Promise<string | null> {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+  });
+  if (!res.ok) return null;
+  const u = await res.json();
+  const meta = u?.user_metadata ?? {};
+  return meta.name || meta.full_name || u?.email || null;
 }
 
 // ——— pass.json
 
-function buildPassJson(ticket: TicketData, event: { title: string; venue: string | null; address: string | null; date: string; end_date: string | null }, typeName: string, holderName: string): string {
+function buildPassJson(ticket: TicketData, event: EventData, typeName: string, holderName: string): string {
   const eventDate = new Date(event.date);
   const endDate = event.end_date ? new Date(event.end_date) : new Date(eventDate.getTime() + 24 * 3600 * 1000);
   const when = eventDate.toLocaleDateString("pt-PT", { day: "numeric", month: "short", year: "numeric" });
@@ -169,14 +207,18 @@ function buildPassJson(ticket: TicketData, event: { title: string; venue: string
         { key: "holder", label: "Titular", value: holderName },
         { key: "order", label: "Nº do bilhete", value: ticket.id },
         { key: "price", label: "Preço pago", value: ticket.price > 0 ? `€${Number(ticket.price).toFixed(2)}` : "Grátis" },
-        { key: "terms", label: "Notas", value: "Apresente este bilhete na entrada do evento. Cada bilhete é pessoal e intransmissível. Apoio: suporte@lyven.pt" },
+        { key: "terms", label: "Notas", value: "Apresente este bilhete na entrada do evento. Cada bilhete é pessoal e intransmissível. Apoio: info@lyven.pt · +351 964 927 026" },
       ],
     },
+    barcodes: [{
+      format: "PKBarcodeFormatQR",
+      message: barcodeMessage,
+      messageEncoding: "iso-8859-1",
+    }],
     barcode: {
       format: "PKBarcodeFormatQR",
       message: barcodeMessage,
       messageEncoding: "iso-8859-1",
-      altText: barcodeMessage,
     },
   });
 }
@@ -255,13 +297,14 @@ Deno.serve(async (req: Request) => {
       const ticket = await fetchTicket(ticketId);
       if (!ticket) return json({ error: "Bilhete não encontrado" }, 404);
 
-      const [event, typeName] = await Promise.all([
+      const [event, holder] = await Promise.all([
         fetchEvent(ticket.event_id),
-        ticket.ticket_type_id ? fetchTicketType(ticket.ticket_type_id) : Promise.resolve(null),
+        fetchHolderName(ticket.user_id),
       ]);
       if (!event) return json({ error: "Evento não encontrado" }, 404);
+      const typeName = ticketTypeName(event.ticket_types, ticket.ticket_type_id);
 
-      const passJson = buildPassJson(ticket, event, typeName ?? "Geral", "Titular Lyven");
+      const passJson = buildPassJson(ticket, event, typeName ?? "Geral", holder ?? "Titular Lyven");
       const pkpass = await buildPkpass(passJson);
 
       return new Response(pkpass, {
@@ -273,7 +316,7 @@ Deno.serve(async (req: Request) => {
       });
     } catch (err) {
       console.error("wallet-pass GET error:", err);
-      return json({ error: "Erro ao gerar o passe" }, 500);
+      return json({ error: "Erro ao gerar o passe", detail: String((err as Error)?.message ?? err) }, 500);
     }
   }
 

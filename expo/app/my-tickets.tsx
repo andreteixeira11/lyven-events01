@@ -6,7 +6,7 @@ import { router } from "expo-router";
 import { useState, useMemo, useCallback } from "react";
 import { COLORS } from "@/constants/colors";
 import QRCode from '@/components/QRCode';
-import { api } from '@/lib/api';
+import { api, walletApi } from '@/lib/api';
 import { shareTicket } from '@/lib/share-utils';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
@@ -96,7 +96,7 @@ export default function MyTicketsScreen() {
     });
   }, [allPurchasedTickets, getEventById]);
 
-  const generateWalletPassMutation = api.tickets.generateWalletPass.useMutation();
+  const [addingPassId, setAddingPassId] = useState<string | null>(null);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('pt-PT', {
@@ -113,35 +113,17 @@ export default function MyTicketsScreen() {
     void refetchTickets();
   }, [refetchEvents, refetchTickets]);
   
+  /** Gera o passe Apple Wallet do bilhete e abre-o (iOS mostra "Adicionar à Apple Wallet"). */
   const handleAddToWallet = async (ticketId: string) => {
-    const platform = Platform.OS === 'ios' ? 'ios' : 'android';
-    const platformName = platform === 'ios' ? 'Apple Wallet' : 'Google Wallet';
-    
+    setAddingPassId(ticketId);
     try {
-      const result = await generateWalletPassMutation.mutateAsync({
-        ticketId,
-      });
-      
-      if (result.success && result.passUrl) {
-        const supported = await Linking.canOpenURL(result.passUrl);
-        
-        if (supported) {
-          await Linking.openURL(result.passUrl);
-        } else {
-          Alert.alert(
-            'Erro',
-            `Não foi possível abrir ${platformName}. Por favor, instale o aplicativo.`,
-            [{ text: 'OK' }]
-          );
-        }
-      }
+      const url = await walletApi.getPassUrl(ticketId);
+      await Linking.openURL(url);
     } catch (err) {
       console.error('Erro ao adicionar à wallet:', err);
-      Alert.alert(
-        'Erro',
-        `Não foi possível adicionar o bilhete à ${platformName}. Tente novamente.`,
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Erro', 'Não foi possível adicionar o bilhete à Apple Wallet. Tente novamente.', [{ text: 'OK' }]);
+    } finally {
+      setAddingPassId(null);
     }
   };
   
@@ -269,21 +251,18 @@ export default function MyTicketsScreen() {
             <Text style={styles.qrCode}>{ticket.id}</Text>
           </View>
           
-          <TouchableOpacity 
-            style={styles.walletButton}
-            onPress={() => handleAddToWallet(ticket.id)}
-            disabled={generateWalletPassMutation.isPending}
-          >
-            <Wallet size={20} color={COLORS.white} />
-            <Text style={styles.walletButtonText}>
-              {generateWalletPassMutation.isPending 
-                ? 'Adicionando...' 
-                : Platform.OS === 'ios' 
-                  ? 'Adicionar à Apple Wallet' 
-                  : 'Adicionar à Google Wallet'
-              }
-            </Text>
-          </TouchableOpacity>
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={styles.walletButton}
+              onPress={() => handleAddToWallet(ticket.id)}
+              disabled={addingPassId !== null}
+            >
+              <Wallet size={20} color={COLORS.white} />
+              <Text style={styles.walletButtonText}>
+                {addingPassId === ticket.id ? 'A abrir...' : 'Adicionar à Apple Wallet'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
