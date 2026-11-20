@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -42,8 +42,23 @@ export default function QRScannerScreen() {
   const [scanned, setScanned] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
   const [lastScannedTicket, setLastScannedTicket] = useState<ScannedTicket | null>(null);
-  const [validatedTickets, setValidatedTickets] = useState<string[]>([]);
   const [isValidating, setIsValidating] = useState(false);
+  /** Bloqueio síncrono: a câmara dispara várias leituras do mesmo QR antes de o estado atualizar. */
+  const scanLockRef = useRef(false);
+  const lastCodeRef = useRef<{ code: string; at: number } | null>(null);
+
+  const { data: stats, refetch: refetchStats } = api.tickets.validationStats.useQuery(
+    { eventId: id ?? '' },
+    { enabled: !!id }
+  );
+  const [liveCount, setLiveCount] = useState<{ validatedCount: number; totalCount: number } | null>(null);
+  const validatedCount = liveCount?.validatedCount ?? stats?.validatedCount ?? 0;
+  const totalCount = liveCount?.totalCount ?? stats?.totalCount ?? 0;
+
+  const releaseScanner = () => {
+    scanLockRef.current = false;
+    setScanned(false);
+  };
 
   const { data: eventData, isLoading, error, refetch } = api.events.get.useQuery(
     { id: id ?? '' },
@@ -67,48 +82,50 @@ export default function QRScannerScreen() {
   }, [permission, requestPermission]);
   
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
-    if (scanned || isValidating) return;
-    
+    if (scanLockRef.current || scanned || isValidating) return;
+    // Ignora o mesmo código lido de novo nos 3 s seguintes (a câmara continua a vê-lo).
+    const now = Date.now();
+    if (lastCodeRef.current && lastCodeRef.current.code === data && now - lastCodeRef.current.at < 3000) return;
+    scanLockRef.current = true;
+    lastCodeRef.current = { code: data, at: now };
+
     setScanned(true);
     setIsValidating(true);
-    
-    console.log('🔍 Validando QR Code:', data);
-    
+
     try {
-      const result = await apiClient.tickets.validate.mutate({ 
+      const result = await apiClient.tickets.validate.mutate({
         qrCode: data,
+        eventId: id,
         validatorId: user?.id,
       });
-      
-      console.log('✅ Resultado da validação:', result);
-      
-      if (!result.valid) {
-        handleInvalidTicket(result.message || 'Bilhete inválido');
-        setIsValidating(false);
+
+      if (typeof result.validatedCount === 'number' && typeof result.totalCount === 'number') {
+        setLiveCount({ validatedCount: result.validatedCount, totalCount: result.totalCount });
+      }
+
+      if (!result.valid || !result.ticket) {
+        let reason = result.message || 'Bilhete inválido';
+        if (result.status === 'already_used' && result.ticket?.validatedAt) {
+          const when = new Intl.DateTimeFormat('pt-PT', { hour: '2-digit', minute: '2-digit' }).format(new Date(result.ticket.validatedAt));
+          reason = `Este bilhete já foi validado às ${when}${result.buyer?.name ? ` (${result.buyer.name})` : ''}.`;
+        }
+        handleInvalidTicket(reason);
         return;
       }
 
-      // Verificar se o bilhete é para este evento
-      if (result.ticket.eventId !== id) {
-        handleInvalidTicket('Bilhete não é para este evento');
-        setIsValidating(false);
-        return;
-      }
-      
-      // Bilhete válido
       const validatedTicket: ScannedTicket = {
         id: result.ticket.id,
         eventId: result.ticket.eventId,
         buyerName: result.buyer?.name || 'Comprador',
-        ticketType: result.ticket.ticketTypeId,
+        ticketType: result.ticketTypeName || 'Geral',
         quantity: result.ticket.quantity,
         isValid: true,
         isAlreadyUsed: true,
         validatedAt: result.ticket.validatedAt ? new Date(result.ticket.validatedAt) : new Date(),
       };
-      
-      handleValidTicket(validatedTicket, data);
-      
+
+      handleValidTicket(validatedTicket);
+      void refetchStats();
     } catch (error: any) {
       console.error('❌ Erro ao validar bilhete:', error);
       
@@ -119,7 +136,7 @@ export default function QRScannerScreen() {
     }
   };
   
-  const handleValidTicket = (ticket: ScannedTicket, qrCode: string) => {
+  const handleValidTicket = (ticket: ScannedTicket) => {
     // Add haptic feedback
     if (Platform.OS !== 'web') {
       Vibration.vibrate([0, 200, 100, 200]);
@@ -132,8 +149,7 @@ export default function QRScannerScreen() {
     };
     
     setLastScannedTicket(validatedTicket);
-    setValidatedTickets(prev => [...prev, qrCode]);
-    
+
     // Show success message
     setTimeout(() => {
       Alert.alert(
@@ -141,8 +157,8 @@ export default function QRScannerScreen() {
         `Comprador: ${ticket.buyerName}\nTipo: ${ticket.ticketType}\nQuantidade: ${ticket.quantity}`,
         [
           { 
-            text: 'Continuar Scanning', 
-            onPress: () => setScanned(false) 
+            text: 'Continuar Scanning',
+            onPress: releaseScanner
           }
         ]
       );
@@ -160,8 +176,8 @@ export default function QRScannerScreen() {
       reason,
       [
         { 
-          text: 'Tentar Novamente', 
-          onPress: () => setScanned(false) 
+          text: 'Tentar Novamente',
+          onPress: releaseScanner
         }
       ]
     );
@@ -240,7 +256,7 @@ export default function QRScannerScreen() {
           <Text style={styles.eventTitle}>{event.title}</Text>
           <Text style={styles.eventVenue}>{event.venue.name}</Text>
           <Text style={styles.validatedCount}>
-            {validatedTickets.length} bilhetes validados
+            {validatedCount} de {totalCount} {totalCount === 1 ? 'bilhete validado' : 'bilhetes validados'}
           </Text>
         </View>
         
@@ -308,7 +324,7 @@ export default function QRScannerScreen() {
         <View style={styles.controls}>
           <TouchableOpacity 
             style={styles.resetButton}
-            onPress={() => setScanned(false)}
+            onPress={releaseScanner}
             disabled={!scanned || isValidating}
           >
             <QrCode size={20} color={scanned ? "#666" : "#fff"} />

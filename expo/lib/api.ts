@@ -98,6 +98,7 @@ export const api = {
     get: createQueryHook(['tickets', 'get'], ticketsApi.get),
     list: createQueryHook(['tickets', 'list'], ticketsApi.list),
     validate: createMutationHook(ticketsApi.validate),
+    validationStats: createQueryHook(['tickets', 'validationStats'], ticketsApi.validationStats),
     cancel: createMutationHook(ticketsApi.cancel),
     transfer: createMutationHook(ticketsApi.transfer),
     addToCalendar: createMutationHook(ticketsApi.addToCalendar),

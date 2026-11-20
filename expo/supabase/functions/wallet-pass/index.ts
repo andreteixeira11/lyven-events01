@@ -2,6 +2,14 @@
 // POST { ticketId } (Authorization do utilizador) → devolve URL do passe com
 // token HMAC de curta duração (10 min).
 // GET ?token=... → devolve o .pkpass (o iOS mostra "Adicionar à Apple Wallet").
+//
+// Atualizações automáticas (Apple Wallet web service, webServiceURL = esta função):
+//   POST/DELETE /v1/devices/{device}/registrations/{passType}/{serial}
+//   GET         /v1/devices/{device}/registrations/{passType}?passesUpdatedSince=
+//   GET         /v1/passes/{passType}/{serial}
+//   POST        /v1/log
+//   POST        /notify  { eventId }  (trigger da BD, header x-wallet-notify-secret)
+//                → push vazio pela APNs para cada iPhone com passes do evento.
 import forge from "npm:node-forge@1.3.1";
 import { zipSync, strToU8 } from "npm:fflate@0.8.2";
 import { ICON_29, ICON_58, ICON_87, WWDR_CERT } from "./assets.ts";
@@ -12,6 +20,9 @@ const PASS_TYPE_ID = Deno.env.get("WALLET_PASS_TYPE_ID") ?? "";
 const TEAM_ID = Deno.env.get("APPLE_TEAM_ID") ?? "";
 const CERT_P12_B64 = Deno.env.get("WALLET_CERT_P12") ?? "";
 const CERT_PASSWORD = Deno.env.get("WALLET_CERT_PASSWORD") ?? "";
+const WALLET_AUTH_SECRET = Deno.env.get("WALLET_AUTH_SECRET") ?? SERVICE_ROLE_KEY;
+const NOTIFY_SECRET = Deno.env.get("WALLET_NOTIFY_SECRET") ?? "";
+const WEB_SERVICE_URL = `${SUPABASE_URL}/functions/v1/wallet-pass`;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -30,10 +41,10 @@ function json(data: unknown, status = 200) {
 
 const encoder = new TextEncoder();
 
-async function hmac(data: string): Promise<string> {
+async function hmac(data: string, secret: string = SERVICE_ROLE_KEY): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
-    encoder.encode(SERVICE_ROLE_KEY),
+    encoder.encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -51,15 +62,36 @@ function unb64url(s: string): string {
   return atob(s.replace(/-/g, "+").replace(/_/g, "/"));
 }
 
-// ——— Assinatura PKCS#7 do manifesto (node-forge)
+/** Token de autenticação do passe (fixo por bilhete; o iPhone envia-o como "ApplePass <token>"). */
+function passAuthToken(serial: string): Promise<string> {
+  return hmac(`wallet-auth:${serial}`, WALLET_AUTH_SECRET);
+}
 
-function signManifest(manifestJson: string): Uint8Array {
+async function checkPassAuth(req: Request, serial: string): Promise<boolean> {
+  const header = req.headers.get("Authorization") ?? "";
+  if (!header.startsWith("ApplePass ")) return false;
+  return header.slice("ApplePass ".length).trim() === (await passAuthToken(serial));
+}
+
+// ——— Certificado do Pass Type ID (assinatura e APNs)
+
+let cachedIdentity: { cert: forge.pki.Certificate; key: forge.pki.PrivateKey } | null = null;
+
+function passIdentity() {
+  if (cachedIdentity) return cachedIdentity;
   const p12Der = forge.util.binary.base64.decode(CERT_P12_B64);
   const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(p12Der), false);
   const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, true, CERT_PASSWORD);
+  const cert = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag]![0].cert!;
+  const key = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag })[forge.pki.oids.pkcs8ShroudedKeyBag]![0].key!;
+  cachedIdentity = { cert, key };
+  return cachedIdentity;
+}
 
-  const signerCert = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag][0].cert!;
-  const signerKey = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag })[forge.pki.oids.pkcs8ShroudedKeyBag][0].key!;
+// ——— Assinatura PKCS#7 do manifesto (node-forge)
+
+function signManifest(manifestJson: string): Uint8Array {
+  const { cert: signerCert, key: signerKey } = passIdentity();
 
   const wwdrAsn1 = forge.asn1.fromDer(forge.util.createBuffer(forge.util.binary.base64.decode(WWDR_CERT)), false);
   const wwdrCert = forge.pki.certificateFromAsn1(wwdrAsn1);
@@ -117,11 +149,12 @@ interface EventData {
   date: string;
   end_date: string | null;
   ticket_types: unknown;
+  updated_at: string;
 }
 
 async function fetchEvent(eventId: string): Promise<EventData | null> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/events?id=eq.${encodeURIComponent(eventId)}&select=title,venue_name,venue_address,venue_city,date,end_date,ticket_types`,
+    `${SUPABASE_URL}/rest/v1/events?id=eq.${encodeURIComponent(eventId)}&select=title,venue_name,venue_address,venue_city,date,end_date,ticket_types,wallet_updated_at`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } }
   );
   if (!res.ok) {
@@ -143,6 +176,7 @@ async function fetchEvent(eventId: string): Promise<EventData | null> {
     date: e.date,
     end_date: e.end_date,
     ticket_types: e.ticket_types,
+    updated_at: e.wallet_updated_at ?? new Date().toISOString(),
   };
 }
 
@@ -170,10 +204,12 @@ async function fetchHolderName(userId: string): Promise<string | null> {
 
 // ——— pass.json
 
-function buildPassJson(ticket: TicketData, event: EventData, typeName: string, holderName: string): string {
+function buildPassJson(ticket: TicketData, event: EventData, typeName: string, holderName: string, authToken: string): string {
   const eventDate = new Date(event.date);
   const endDate = event.end_date ? new Date(event.end_date) : new Date(eventDate.getTime() + 24 * 3600 * 1000);
-  const when = eventDate.toLocaleDateString("pt-PT", { day: "numeric", month: "short", year: "numeric" });
+  const when = eventDate.toLocaleString("pt-PT", {
+    day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Lisbon",
+  });
   const where = event.venue || event.address || "A confirmar";
   const barcodeMessage = ticket.qr_code || ticket.id;
 
@@ -184,6 +220,8 @@ function buildPassJson(ticket: TicketData, event: EventData, typeName: string, h
     organizationName: "Lyven",
     description: `Bilhete — ${event.title}`.slice(0, 120),
     serialNumber: ticket.id,
+    webServiceURL: WEB_SERVICE_URL,
+    authenticationToken: authToken,
     sharingProhibited: true,
     backgroundColor: "rgb(26, 26, 46)",
     foregroundColor: "rgb(255, 255, 255)",
@@ -193,11 +231,11 @@ function buildPassJson(ticket: TicketData, event: EventData, typeName: string, h
     expirationDate: new Date(endDate.getTime() + 6 * 3600 * 1000).toISOString(),
     eventTicket: {
       primaryFields: [
-        { key: "event", label: "EVENTO", value: event.title },
+        { key: "event", label: "EVENTO", value: event.title, changeMessage: "Evento atualizado: %@" },
       ],
       secondaryFields: [
-        { key: "when", label: "DATA", value: when },
-        { key: "where", label: "LOCAL", value: where },
+        { key: "when", label: "DATA", value: when, changeMessage: "Nova data: %@" },
+        { key: "where", label: "LOCAL", value: where, changeMessage: "Novo local: %@" },
       ],
       auxiliaryFields: [
         { key: "ticket", label: "BILHETE", value: typeName },
@@ -247,11 +285,218 @@ async function buildPkpass(passJson: string): Promise<Uint8Array> {
   return zipSync(files, { level: 0 });
 }
 
+/** Gera o .pkpass completo de um bilhete (dados atuais da BD). */
+async function passForTicket(ticket: TicketData): Promise<{ pkpass: Uint8Array; updatedAt: Date } | null> {
+  const [event, holder, authToken] = await Promise.all([
+    fetchEvent(ticket.event_id),
+    fetchHolderName(ticket.user_id),
+    passAuthToken(ticket.id),
+  ]);
+  if (!event) return null;
+  const typeName = ticketTypeName(event.ticket_types, ticket.ticket_type_id);
+  const passJson = buildPassJson(ticket, event, typeName ?? "Geral", holder ?? "Titular Lyven", authToken);
+  return { pkpass: await buildPkpass(passJson), updatedAt: new Date(event.updated_at) };
+}
+
+function pkpassResponse(pkpass: Uint8Array, updatedAt: Date): Response {
+  return new Response(pkpass, {
+    headers: {
+      "Content-Type": "application/vnd.apple.pkpass",
+      "Content-Disposition": 'attachment; filename="bilhete-lyven.pkpass"',
+      "Last-Modified": updatedAt.toUTCString(),
+      ...CORS_HEADERS,
+    },
+  });
+}
+
+// ——— Base de dados (service role)
+
+const SR_HEADERS = {
+  apikey: SERVICE_ROLE_KEY,
+  Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+  "Content-Type": "application/json",
+};
+
+async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: SR_HEADERS,
+    body: JSON.stringify(args),
+  });
+  if (!res.ok) throw new Error(`${fn}: ${res.status} ${await res.text()}`);
+  return await res.json() as T;
+}
+
+// ——— APNs (push vazio pede ao iPhone para descarregar o passe atualizado)
+
+let apnsClient: Deno.HttpClient | null = null;
+
+function getApnsClient(): Deno.HttpClient {
+  if (apnsClient) return apnsClient;
+  const { cert, key } = passIdentity();
+  apnsClient = Deno.createHttpClient({
+    cert: forge.pki.certificateToPem(cert),
+    key: forge.pki.privateKeyToPem(key),
+  });
+  return apnsClient;
+}
+
+async function sendPassPush(pushToken: string): Promise<{ status: number; reason?: string }> {
+  const res = await fetch(`https://api.push.apple.com/3/device/${pushToken}`, {
+    method: "POST",
+    client: getApnsClient(),
+    headers: { "apns-topic": PASS_TYPE_ID, "apns-push-type": "background", "apns-priority": "5" },
+    body: "{}",
+  });
+  let reason: string | undefined;
+  if (res.status !== 200) {
+    try { reason = (await res.json())?.reason; } catch { /* sem corpo */ }
+  } else {
+    await res.body?.cancel();
+  }
+  return { status: res.status, reason };
+}
+
+async function notifyEvent(eventId: string) {
+  const rows = await rpc<{ push_token: string; device_library_id: string }[]>("wallet_event_push_tokens", { p_event_id: eventId });
+  const tokens = [...new Set(rows.map((r) => r.push_token))];
+  const results = await Promise.all(tokens.map(async (token) => {
+    try {
+      const r = await sendPassPush(token);
+      // 410: o passe foi removido do iPhone → apagar registo.
+      if (r.status === 410 || r.reason === "BadDeviceToken" || r.reason === "Unregistered") {
+        await fetch(`${SUPABASE_URL}/rest/v1/wallet_registrations?push_token=eq.${encodeURIComponent(token)}`, {
+          method: "DELETE", headers: SR_HEADERS,
+        });
+      }
+      return r;
+    } catch (err) {
+      console.error("APNs error:", err);
+      return { status: 0, reason: String((err as Error)?.message ?? err) };
+    }
+  }));
+  return { devices: tokens.length, sent: results.filter((r) => r.status === 200).length, results };
+}
+
+// ——— Web service da Apple Wallet
+
+async function handleWebService(req: Request, path: string): Promise<Response> {
+  const parts = path.split("/").filter(Boolean).map(decodeURIComponent); // ["v1", ...]
+  const { method } = req;
+
+  // POST /v1/log
+  if (parts[1] === "log" && method === "POST") {
+    try { console.log("Wallet log:", JSON.stringify(await req.json())); } catch { /* ignorar */ }
+    return new Response(null, { status: 200 });
+  }
+
+  // /v1/devices/{device}/registrations/{passType}[/{serial}]
+  if (parts[1] === "devices" && parts[3] === "registrations") {
+    const device = parts[2];
+    const passType = parts[4];
+    const serial = parts[5];
+    if (passType !== PASS_TYPE_ID) return new Response(null, { status: 404 });
+
+    if (!serial && method === "GET") {
+      const sinceRaw = new URL(req.url).searchParams.get("passesUpdatedSince");
+      const since = sinceRaw && /^\d+$/.test(sinceRaw) ? Number(sinceRaw) : null;
+      const rows = await rpc<{ serial_number: string; updated_ms: number }[]>("wallet_updated_serials", {
+        p_device: device, p_pass_type: passType, p_since_ms: since,
+      });
+      if (!rows.length) return new Response(null, { status: 204 });
+      const last = Math.max(...rows.map((r) => Number(r.updated_ms)));
+      return json({ serialNumbers: rows.map((r) => r.serial_number), lastUpdated: String(last) });
+    }
+
+    if (serial && (method === "POST" || method === "DELETE")) {
+      if (!(await checkPassAuth(req, serial))) return new Response(null, { status: 401 });
+      const filter = `device_library_id=eq.${encodeURIComponent(device)}&pass_type_id=eq.${encodeURIComponent(passType)}&serial_number=eq.${encodeURIComponent(serial)}`;
+
+      if (method === "DELETE") {
+        await fetch(`${SUPABASE_URL}/rest/v1/wallet_registrations?${filter}`, { method: "DELETE", headers: SR_HEADERS });
+        return new Response(null, { status: 200 });
+      }
+
+      let pushToken = "";
+      try { pushToken = (await req.json())?.pushToken ?? ""; } catch { /* sem corpo */ }
+      if (!pushToken) return new Response(null, { status: 400 });
+
+      const existing = await fetch(`${SUPABASE_URL}/rest/v1/wallet_registrations?${filter}&select=push_token`, { headers: SR_HEADERS });
+      const rows = existing.ok ? await existing.json() : [];
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/wallet_registrations?on_conflict=device_library_id,pass_type_id,serial_number`, {
+        method: "POST",
+        headers: { ...SR_HEADERS, Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ device_library_id: device, pass_type_id: passType, serial_number: serial, push_token: pushToken }),
+      });
+      if (!res.ok) {
+        console.error("wallet register:", res.status, await res.text());
+        return new Response(null, { status: 500 });
+      }
+      return new Response(null, { status: rows.length ? 200 : 201 });
+    }
+  }
+
+  // GET /v1/passes/{passType}/{serial}
+  if (parts[1] === "passes" && method === "GET") {
+    const passType = parts[2];
+    const serial = parts[3];
+    if (passType !== PASS_TYPE_ID || !serial) return new Response(null, { status: 404 });
+    if (!(await checkPassAuth(req, serial))) return new Response(null, { status: 401 });
+
+    const ticket = await fetchTicket(serial);
+    if (!ticket) return new Response(null, { status: 404 });
+    const built = await passForTicket(ticket);
+    if (!built) return new Response(null, { status: 404 });
+
+    const ims = req.headers.get("If-Modified-Since");
+    if (ims) {
+      const since = new Date(ims).getTime();
+      // Last-Modified tem precisão de segundos
+      if (!Number.isNaN(since) && Math.floor(built.updatedAt.getTime() / 1000) * 1000 <= since) {
+        return new Response(null, { status: 304 });
+      }
+    }
+    return pkpassResponse(built.pkpass, built.updatedAt);
+  }
+
+  return new Response(null, { status: 404 });
+}
+
 // ——— Handler
 
 Deno.serve(async (req: Request) => {
   const { method } = req;
   if (method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
+
+  const pathname = new URL(req.url).pathname;
+
+  // Web service da Apple Wallet (…/wallet-pass/v1/…)
+  const wsIndex = pathname.indexOf("/v1/");
+  if (wsIndex !== -1) {
+    try {
+      return await handleWebService(req, pathname.slice(wsIndex));
+    } catch (err) {
+      console.error("wallet web service error:", err);
+      return new Response(null, { status: 500 });
+    }
+  }
+
+  // Aviso da BD: um evento mudou → push para os iPhones com passes desse evento.
+  if (pathname.endsWith("/notify") && method === "POST") {
+    if (!NOTIFY_SECRET || req.headers.get("x-wallet-notify-secret") !== NOTIFY_SECRET) {
+      return json({ error: "Não autorizado" }, 401);
+    }
+    try {
+      const { eventId } = await req.json();
+      if (!eventId) return json({ error: "Falta o eventId" }, 400);
+      const result = await notifyEvent(String(eventId));
+      console.log("wallet notify:", eventId, JSON.stringify(result));
+      return json(result);
+    } catch (err) {
+      console.error("wallet notify error:", err);
+      return json({ error: String((err as Error)?.message ?? err) }, 500);
+    }
+  }
 
   if (method === "POST") {
     try {
@@ -297,23 +542,9 @@ Deno.serve(async (req: Request) => {
       const ticket = await fetchTicket(ticketId);
       if (!ticket) return json({ error: "Bilhete não encontrado" }, 404);
 
-      const [event, holder] = await Promise.all([
-        fetchEvent(ticket.event_id),
-        fetchHolderName(ticket.user_id),
-      ]);
-      if (!event) return json({ error: "Evento não encontrado" }, 404);
-      const typeName = ticketTypeName(event.ticket_types, ticket.ticket_type_id);
-
-      const passJson = buildPassJson(ticket, event, typeName ?? "Geral", holder ?? "Titular Lyven");
-      const pkpass = await buildPkpass(passJson);
-
-      return new Response(pkpass, {
-        headers: {
-          "Content-Type": "application/vnd.apple.pkpass",
-          "Content-Disposition": 'attachment; filename="bilhete-lyven.pkpass"',
-          ...CORS_HEADERS,
-        },
-      });
+      const built = await passForTicket(ticket);
+      if (!built) return json({ error: "Evento não encontrado" }, 404);
+      return pkpassResponse(built.pkpass, built.updatedAt);
     } catch (err) {
       console.error("wallet-pass GET error:", err);
       return json({ error: "Erro ao gerar o passe", detail: String((err as Error)?.message ?? err) }, 500);

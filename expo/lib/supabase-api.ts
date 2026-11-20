@@ -1031,6 +1031,22 @@ export const usersApi = {
   },
 };
 
+export interface TicketValidationResult {
+  valid: boolean;
+  status: 'valid' | 'already_used' | 'not_found' | 'wrong_event' | 'expired' | 'forbidden' | 'unauthorized' | 'error';
+  message: string;
+  ticketTypeName?: string | null;
+  validatedCount?: number;
+  totalCount?: number;
+  ticket?: {
+    id: string; eventId: string; userId: string; ticketTypeId: string | null;
+    quantity: number; price: number; qrCode: string | null; isUsed: boolean;
+    validatedAt: string | null; validatedBy: string | null;
+    purchaseDate: string | null; validUntil: string | null;
+  };
+  buyer?: { id: string; name: string | null; email: string | null } | null;
+}
+
 export const ticketsApi = {
   /** Emite bilhetes gratuitos (€0) via edge function — sem pagamento. */
   claimFree: async (input: {
@@ -1152,67 +1168,49 @@ export const ticketsApi = {
     }
   },
 
-  validate: async (input: { ticketId?: string; qrCode?: string; validatorId?: string }): Promise<any> => {
+  /**
+   * Valida um bilhete no servidor (RPC atómica `validate_ticket`): só a primeira
+   * leitura marca o bilhete como usado; as seguintes devolvem `already_used`.
+   */
+  validate: async (input: { ticketId?: string; qrCode?: string; eventId?: string; validatorId?: string }): Promise<TicketValidationResult> => {
     try {
-      let query = supabase.from('tickets').select(`
-        *,
-        users:user_id (id, name, email)
-      `);
-      if (input.ticketId) query = query.eq('id', input.ticketId);
-      if (input.qrCode) query = query.eq('qr_code', input.qrCode);
-
-      const { data, error } = await query.single();
-      if (error || !data) return { valid: false, message: 'Bilhete não encontrado' };
-      if (data.is_used) {
-        return {
-          valid: false,
-          message: 'Bilhete já utilizado',
-          ticket: {
-            id: data.id, eventId: data.event_id, userId: data.user_id,
-            ticketTypeId: data.ticket_type_id, quantity: data.quantity, price: data.price,
-            qrCode: data.qr_code, isUsed: data.is_used,
-            validatedAt: data.validated_at, validatedBy: data.validated_by,
-            purchaseDate: data.purchase_date, validUntil: data.valid_until,
-          },
-          buyer: data.users ? { id: (data.users as any).id, name: (data.users as any).name, email: (data.users as any).email } : null,
-        };
+      const { data, error } = await supabase.rpc('validate_ticket', {
+        p_qr_code: input.qrCode ?? null,
+        p_ticket_id: input.ticketId ?? null,
+        p_event_id: input.eventId ?? null,
+      });
+      if (error || !data) {
+        return { valid: false, status: 'error', message: 'Erro ao validar bilhete' };
       }
-
-      // Check expiry
-      if (data.valid_until && new Date(data.valid_until) < new Date()) {
-        return {
-          valid: false,
-          message: 'Bilhete expirado',
-          ticket: {
-            id: data.id, eventId: data.event_id, userId: data.user_id,
-            ticketTypeId: data.ticket_type_id, quantity: data.quantity, price: data.price,
-            qrCode: data.qr_code, isUsed: data.is_used,
-            validatedAt: data.validated_at, validatedBy: data.validated_by,
-            purchaseDate: data.purchase_date, validUntil: data.valid_until,
-          },
-        };
-      }
-
-      const nowIso = new Date().toISOString();
-      await supabase.from('tickets')
-        .update({ is_used: true, validated_at: nowIso, validated_by: input.validatorId ?? null })
-        .eq('id', data.id);
-
+      const r = data as any;
+      const t = r.ticket;
       return {
-        valid: true,
-        message: 'Bilhete válido!',
-        ticket: {
-          id: data.id, eventId: data.event_id, userId: data.user_id,
-          ticketTypeId: data.ticket_type_id, quantity: data.quantity, price: data.price,
-          qrCode: data.qr_code, isUsed: true,
-          validatedAt: nowIso, validatedBy: input.validatorId ?? null,
-          purchaseDate: data.purchase_date, validUntil: data.valid_until,
-        },
-        buyer: data.users ? { id: (data.users as any).id, name: (data.users as any).name, email: (data.users as any).email } : null,
+        valid: r.status === 'valid',
+        status: r.status,
+        message: r.message ?? 'Bilhete inválido',
+        ticketTypeName: r.ticketTypeName ?? null,
+        validatedCount: typeof r.validatedCount === 'number' ? r.validatedCount : undefined,
+        totalCount: typeof r.totalCount === 'number' ? r.totalCount : undefined,
+        ticket: t ? {
+          id: t.id, eventId: t.event_id, userId: t.user_id,
+          ticketTypeId: t.ticket_type_id, quantity: t.quantity, price: t.price,
+          qrCode: t.qr_code, isUsed: t.is_used,
+          validatedAt: t.validated_at, validatedBy: t.validated_by,
+          purchaseDate: t.purchase_date, validUntil: t.valid_until,
+        } : undefined,
+        buyer: r.buyer ? { id: r.buyer.id, name: r.buyer.name, email: r.buyer.email } : null,
       };
     } catch {
-      return { valid: false, message: 'Erro ao validar bilhete' };
+      return { valid: false, status: 'error', message: 'Erro ao validar bilhete' };
     }
+  },
+
+  /** Entradas validadas / bilhetes vendidos de um evento (valores reais da BD). */
+  validationStats: async (input: { eventId: string }): Promise<{ validatedCount: number; totalCount: number }> => {
+    const { data, error } = await supabase.rpc('event_validation_stats', { p_event_id: input.eventId });
+    if (error || !data) return { validatedCount: 0, totalCount: 0 };
+    const r = data as any;
+    return { validatedCount: Number(r.validatedCount) || 0, totalCount: Number(r.totalCount) || 0 };
   },
 
   cancel: async (input: { ticketId: string }): Promise<{ success: boolean }> => {
