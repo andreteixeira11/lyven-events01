@@ -6,6 +6,121 @@ const FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") ?? "Lyven <noreply@lyven.pt
 const resend = new Resend(RESEND_API_KEY);
 
 const ADMIN_EMAIL = "info@lyven.pt";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+const SERVICE_HEADERS = {
+  Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+  apikey: SERVICE_ROLE_KEY,
+};
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Descobre o destinatário dos bilhetes de forma segura:
+ * - chamada interna (webhook) com a service role: confia no userId enviado;
+ * - chamada da app: valida o token do utilizador e usa o email da própria conta.
+ */
+async function resolveTicketOwner(req: Request, body: EmailRequest): Promise<{ userId: string; email: string; name: string } | null> {
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (!token) return null;
+
+  // O gateway do Supabase já validou a assinatura do JWT (verify_jwt), por isso
+  // basta ler o papel do token para reconhecer chamadas internas.
+  let role = "";
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    role = payload?.role ?? "";
+  } catch {
+    role = "";
+  }
+  const isService = token === SERVICE_ROLE_KEY || role === "service_role";
+
+  if (isService && body.userId) {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(body.userId)}`, { headers: SERVICE_HEADERS });
+    if (!res.ok) return null;
+    const u = await res.json();
+    return { userId: u.id, email: u.email ?? "", name: u.user_metadata?.name ?? u.user_metadata?.full_name ?? "" };
+  }
+
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { Authorization: `Bearer ${token}`, apikey: ANON_KEY || SERVICE_ROLE_KEY },
+  });
+  if (!res.ok) return null;
+  const u = await res.json();
+  if (!u?.id) return null;
+  return { userId: u.id, email: u.email ?? "", name: u.user_metadata?.name ?? u.user_metadata?.full_name ?? "" };
+}
+
+async function buildTicketsEmail(ownerId: string, ticketIds: string[], name: string): Promise<{ subject: string; html: string } | { error: string }> {
+  const ids = ticketIds.filter((id) => typeof id === "string" && id.length > 0).slice(0, 50);
+  if (ids.length === 0) return { error: "Nenhum bilhete indicado." };
+
+  const inList = ids.map((id) => `"${id.replace(/"/g, "")}"`).join(",");
+  const ticketsRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/tickets?id=in.(${encodeURIComponent(inList)})&user_id=eq.${encodeURIComponent(ownerId)}&select=id,event_id,ticket_type_id,quantity,price,qr_code,purchase_date`,
+    { headers: SERVICE_HEADERS },
+  );
+  const tickets = await ticketsRes.json();
+  if (!Array.isArray(tickets) || tickets.length === 0) return { error: "Bilhetes não encontrados nesta conta." };
+
+  const eventIds = [...new Set(tickets.map((t: any) => t.event_id))];
+  const eventsRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/events?id=in.(${encodeURIComponent(eventIds.map((id) => `"${id}"`).join(","))})&select=id,title,date,venue_name,venue_address,venue_city,image,ticket_types`,
+    { headers: SERVICE_HEADERS },
+  );
+  const events = await eventsRes.json();
+  const eventById = new Map<string, any>((Array.isArray(events) ? events : []).map((e: any) => [e.id, e]));
+
+  const first = eventById.get(tickets[0].event_id);
+  const title = first?.title ?? "Evento";
+
+  const blocks = tickets.map((t: any) => {
+    const ev = eventById.get(t.event_id) ?? {};
+    let types: any[] = [];
+    try {
+      types = typeof ev.ticket_types === "string" ? JSON.parse(ev.ticket_types) : ev.ticket_types ?? [];
+    } catch {
+      types = [];
+    }
+    const typeName = types.find((tt: any) => tt.id === t.ticket_type_id)?.name ?? "Bilhete";
+    const date = ev.date ? new Date(ev.date) : null;
+    const dateText = date && !isNaN(date.getTime())
+      ? date.toLocaleString("pt-PT", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Lisbon" })
+      : "";
+    const place = [ev.venue_name, ev.venue_city].filter(Boolean).join(", ");
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=8&data=${encodeURIComponent(t.qr_code ?? "")}`;
+    const qty = Number(t.quantity) > 1 ? ` · ${t.quantity} entradas` : "";
+    return `
+      <div style="border:1px solid #e6f6f7;border-radius:14px;padding:20px;margin:0 0 20px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:17px;font-weight:700;color:#1a1a2e;">${escapeHtml(ev.title ?? "Evento")}</p>
+        <p style="margin:0 0 4px;font-size:14px;color:#0099a8;font-weight:600;">${escapeHtml(typeName)}${qty}</p>
+        ${dateText ? `<p style="margin:0 0 2px;font-size:13px;color:#6b7280;">${escapeHtml(dateText)}</p>` : ""}
+        ${place ? `<p style="margin:0 0 16px;font-size:13px;color:#6b7280;">${escapeHtml(place)}</p>` : ""}
+        <img src="${qrUrl}" width="220" height="220" alt="Código QR do bilhete" style="display:block;margin:0 auto 12px;border-radius:8px;" />
+        <p style="margin:0;font-size:11px;color:#9ca3af;word-break:break-all;">${escapeHtml(t.qr_code)}</p>
+      </div>`;
+  }).join("");
+
+  const subject = tickets.length > 1 ? `Os teus bilhetes — ${title}` : `O teu bilhete — ${title}`;
+  const html = emailWrapper(tickets.length > 1 ? "Os teus bilhetes" : "O teu bilhete", `
+    <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#1a1a2e;">Olá${name ? `, ${escapeHtml(name)}` : ""}!</p>
+    <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6;">
+      Aqui ${tickets.length > 1 ? "estão os teus bilhetes" : "está o teu bilhete"}. Apresenta o código QR à entrada do evento — também o encontras sempre na app Lyven, em "Os meus bilhetes".
+    </p>
+    ${blocks}
+    <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6;text-align:center;">
+      Cada código só pode ser usado uma vez. Não partilhes este email.
+    </p>`);
+  return { subject, html };
+}
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -80,6 +195,9 @@ interface EmailRequest {
   budget?: number;
   // email preferences
   preferences?: Record<string, boolean>;
+  // tickets
+  ticketIds?: string[];
+  userId?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -206,6 +324,18 @@ Deno.serve(async (req: Request) => {
         break;
       }
 
+      case "sendTickets": {
+        const owner = await resolveTicketOwner(req, body);
+        if (!owner) return json({ error: "Sessão inválida. Inicia sessão novamente." }, 401);
+        if (!owner.email) return json({ error: "A tua conta não tem email associado." }, 400);
+        const built = await buildTicketsEmail(owner.userId, body.ticketIds ?? [], owner.name || body.name || "");
+        if ("error" in built) return json({ error: built.error }, 404);
+        to = owner.email;
+        subject = built.subject;
+        html = built.html;
+        break;
+      }
+
       case "savePreferences": {
         // Only persists to DB if needed; currently just acknowledge
         return json({ success: true });
@@ -238,7 +368,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log("[send-email] Email sent successfully, id:", data?.id);
-    return json({ success: true, emailId: data?.id });
+    return json({ success: true, emailId: data?.id, to });
   } catch (err: any) {
     console.error("[send-email] Error:", err?.message || err);
     return json({ error: err?.message || "Internal error" }, 500);

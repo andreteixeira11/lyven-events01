@@ -37,6 +37,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/theme-context';
 import { useUser } from '@/hooks/user-context';
 import { api, ticketsApi } from '@/lib/api';
+import { sendEmail } from '@/lib/email';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
 import QRCode from '@/components/QRCode';
@@ -63,6 +64,7 @@ export default function TicketDetailsScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [transferModalVisible, setTransferModalVisible] = useState(false);
   const [transferEmail, setTransferEmail] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [refundModalVisible, setRefundModalVisible] = useState(false);
 
@@ -214,19 +216,30 @@ export default function TicketDetailsScreen() {
   };
 
   const handleDownloadTicket = async () => {
+    if (sendingEmail) return;
+    const ticketIds = tickets.map((t) => t.id).filter(Boolean);
+    if (ticketIds.length === 0) {
+      Alert.alert('Erro', 'Não foi possível encontrar o bilhete.');
+      return;
+    }
     Alert.alert(
-      'Baixar Bilhete',
-      'O PDF do seu bilhete será enviado para o email registado.',
+      'Enviar por email',
+      `${ticketIds.length > 1 ? 'Os seus bilhetes serão enviados' : 'O seu bilhete será enviado'} com o código QR para ${user?.email ?? 'o email da sua conta'}.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Enviar',
-          onPress: () => {
-            setTimeout(() => {
-              Alert.alert('Sucesso', 'Bilhete enviado para o seu email!');
-            }, 1000);
-          }
-        }
+          onPress: async () => {
+            setSendingEmail(true);
+            const result = await sendEmail({ type: 'sendTickets', ticketIds, name: user?.name });
+            setSendingEmail(false);
+            if (result.success) {
+              Alert.alert('Enviado', `Enviámos ${ticketIds.length > 1 ? 'os bilhetes' : 'o bilhete'} para ${result.to ?? user?.email ?? 'o seu email'}. Verifique também a pasta de spam.`);
+            } else {
+              Alert.alert('Não foi possível enviar', result.error ?? 'Tente novamente dentro de alguns minutos.');
+            }
+          },
+        },
       ]
     );
   };

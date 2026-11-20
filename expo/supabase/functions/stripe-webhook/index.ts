@@ -143,6 +143,22 @@ async function fulfillSession(session: any) {
     console.error("[stripe-webhook] notificação falhou (não crítico):", err?.message);
   }
 
+  // Email com os bilhetes (QR) para o comprador (não crítico).
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        apikey: SERVICE_ROLE_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ type: "sendTickets", userId, ticketIds: ticketRows.map((t) => t.id) }),
+    });
+    if (!res.ok) console.error("[stripe-webhook] email de bilhetes falhou:", res.status, await res.text());
+  } catch (err) {
+    console.error("[stripe-webhook] email de bilhetes falhou (não crítico):", err?.message);
+  }
+
   console.log("[stripe-webhook] bilhetes emitidos para sessão:", sessionId, ticketRows.length);
 }
 

@@ -21,7 +21,8 @@ export async function sendEmail(payload: {
   adType?: string;
   budget?: number;
   preferences?: Record<string, boolean>;
-}): Promise<{ success: boolean; error?: string }> {
+  ticketIds?: string[];
+}): Promise<{ success: boolean; error?: string; to?: string }> {
   try {
     console.log('[sendEmail] Invoking send-email edge function with type:', payload.type, 'to:', payload.email);
     const { data, error } = await supabase.functions.invoke('send-email', {
@@ -40,7 +41,7 @@ export async function sendEmail(payload: {
       return { success: false, error: data.error };
     }
 
-    return { success: data?.success === true };
+    return { success: data?.success === true, to: data?.to };
   } catch (err: any) {
     console.warn('[sendEmail] Failed:', err?.message, err);
     return { success: false, error: err?.message || 'Erro ao enviar email' };
