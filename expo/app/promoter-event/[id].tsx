@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -24,6 +25,7 @@ import {
   Download,
   ChevronRight,
   Eye,
+  UserCheck,
 } from 'lucide-react-native';
 import { api } from '@/lib/api';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
@@ -33,6 +35,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '@/lib/supabase';
 import BackButton from '@/components/BackButton';
+import { useManualValidation } from '@/hooks/use-manual-validation';
 
 type Section = 'buyers' | 'scanner' | 'stats';
 
@@ -56,6 +59,25 @@ export default function PromoterEventScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterValidated, setFilterValidated] = useState<'all' | 'validated' | 'pending'>('all');
   const [showPendingBuyers, setShowPendingBuyers] = useState(false);
+  const { confirmValidation, validatingId } = useManualValidation(id);
+
+  const renderValidateButton = (buyer: TicketBuyer) => (
+    <TouchableOpacity
+      testID={`validate-${buyer.id}`}
+      style={styles.quickValidateButton}
+      disabled={validatingId === buyer.id}
+      onPress={() => confirmValidation(buyer)}
+    >
+      {validatingId === buyer.id ? (
+        <ActivityIndicator color="#fff" size="small" />
+      ) : (
+        <>
+          <UserCheck size={18} color="#fff" />
+          <Text style={styles.quickValidateText}>Validar entrada</Text>
+        </>
+      )}
+    </TouchableOpacity>
+  );
 
   const { data: eventData, isLoading, error, refetch } = api.events.get.useQuery(
     { id: id ?? '' },
@@ -564,15 +586,25 @@ export default function PromoterEventScreen() {
               )}
             </View>
 
+            {!buyer.isValidated && renderValidateButton(buyer)}
             <TouchableOpacity 
               style={styles.viewDetailsButton}
-              onPress={() => router.push(`/buyer-details/${buyer.id}`)}
+              onPress={() => router.push(`/buyer-details/${buyer.id}?eventId=${id}`)}
             >
               <Text style={styles.viewDetailsText}>Ver Detalhes</Text>
               <ChevronRight size={18} color="#0099a8" />
             </TouchableOpacity>
           </View>
         ))}
+        {buyers.length === 0 && (
+          <View style={styles.emptyState}>
+            <Users size={56} color="#9CA3AF" />
+            <Text style={styles.emptyStateTitle}>Ainda sem compradores</Text>
+            <Text style={styles.emptyStateDescription}>
+              Quando alguém comprar bilhete, aparece aqui com nome, email e estado da entrada.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -682,9 +714,10 @@ export default function PromoterEventScreen() {
                     </Text>
                   </View>
 
+                  {renderValidateButton(buyer)}
                   <TouchableOpacity 
                     style={styles.viewDetailsButton}
-                    onPress={() => router.push(`/buyer-details/${buyer.id}`)}
+                    onPress={() => router.push(`/buyer-details/${buyer.id}?eventId=${id}`)}
                   >
                     <Text style={styles.viewDetailsText}>Ver Detalhes</Text>
                     <ChevronRight size={18} color="#0099a8" />
@@ -1529,6 +1562,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#0099a8',
     fontWeight: 'bold' as const,
+  },
+  quickValidateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#28A745',
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  quickValidateText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700' as const,
   },
   pendingBuyersList: {
     flex: 1,

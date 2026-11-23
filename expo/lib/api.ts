@@ -206,6 +206,7 @@ export const api = {
     commissions: createQueryHook(['analytics', 'commissions'], analyticsApi.commissions),
     eventStats: createQueryHook(['analytics', 'eventStats'], analyticsApi.eventStats),
     promoterStats: createQueryHook(['analytics', 'promoterStats'], analyticsApi.promoterStats),
+    buyerHistory: createQueryHook(['analytics', 'buyerHistory'], analyticsApi.buyerHistory),
   },
   adminSettings: {
     get: createQueryHook(['adminSettings', 'get'], adminSettingsApi.get),

@@ -7,13 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import {
-  ArrowLeft,
   Search,
+  UserCheck,
   Download,
   Calendar,
   MapPin,
@@ -28,6 +27,8 @@ import { api } from '@/lib/api';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
 import BackButton from '@/components/BackButton';
+import { useManualValidation } from '@/hooks/use-manual-validation';
+import { exportBuyersCsv } from '@/lib/buyers-csv';
 
 interface TicketBuyer {
   id: string;
@@ -52,10 +53,11 @@ export default function EventBuyersScreen() {
     { id: id ?? '' },
     { enabled: !!id }
   );
-  const { data: eventStats } = api.analytics.eventStats.useQuery(
+  const { data: eventStats, refetch: refetchStats, isRefetching } = api.analytics.eventStats.useQuery(
     { eventId: (id as string) ?? '' },
     { enabled: !!id }
   );
+  const { confirmValidation, validatingId } = useManualValidation(id);
   const event = eventData
     ? {
         id: eventData.id,
@@ -132,29 +134,10 @@ export default function EventBuyersScreen() {
     }).format(date);
   };
   
+  const validationPercent = totalTickets > 0 ? Math.round((validatedTickets / totalTickets) * 100) : 0;
+
   const handleExportData = () => {
-    const csvData = [
-      ['Nome', 'Email', 'Telefone', 'Tipo de Bilhete', 'Quantidade', 'Total Pago', 'Data de Compra', 'Status', 'QR Code'],
-      ...filteredBuyers.map(buyer => [
-        buyer.name,
-        buyer.email,
-        buyer.phone,
-        buyer.ticketType,
-        buyer.quantity.toString(),
-        buyer.totalPaid.toString(),
-        formatDate(buyer.purchaseDate),
-        buyer.isValidated ? 'Validado' : 'Pendente',
-        buyer.qrCode
-      ])
-    ];
-    
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    
-    Alert.alert(
-      'Dados Exportados',
-      `Dados de ${filteredBuyers.length} compradores exportados com sucesso!\n\nConteúdo CSV:\n${csvContent.substring(0, 200)}...`,
-      [{ text: 'OK' }]
-    );
+    void exportBuyersCsv(event?.title ?? 'evento', filteredBuyers);
   };
   
   if (isLoading) {
@@ -244,14 +227,14 @@ export default function EventBuyersScreen() {
           <View style={styles.progressHeader}>
             <Text style={styles.progressTitle}>Progresso de Validação</Text>
             <Text style={styles.progressPercentage}>
-              {Math.round((validatedTickets / totalTickets) * 100)}%
+              {validationPercent}%
             </Text>
           </View>
           <View style={styles.progressBar}>
             <View 
               style={[
                 styles.progressFill, 
-                { width: `${(validatedTickets / totalTickets) * 100}%` }
+                { width: `${validationPercent}%` }
               ]} 
             />
           </View>
@@ -295,10 +278,22 @@ export default function EventBuyersScreen() {
         </View>
         
         {/* Buyers List */}
-        <ScrollView style={styles.buyersList} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.buyersList}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetchStats(); }} tintColor="#fff" />}
+        >
           <Text style={styles.resultsCount}>
             {filteredBuyers.length} {filteredBuyers.length === 1 ? 'comprador' : 'compradores'}
           </Text>
+
+          {buyers.length === 0 && (
+            <View style={styles.emptyState}>
+              <Users size={40} color="#444" />
+              <Text style={styles.emptyTitle}>Ainda sem compradores</Text>
+              <Text style={styles.emptyText}>Quando alguém comprar bilhete, aparece aqui com nome, email e estado da entrada.</Text>
+            </View>
+          )}
           
           {filteredBuyers.map((buyer) => (
             <TouchableOpacity 
@@ -353,12 +348,31 @@ export default function EventBuyersScreen() {
                 )}
               </View>
               
-              <TouchableOpacity 
-                style={styles.detailsButton}
-                onPress={() => router.push(`/buyer-details/${buyer.id}?eventId=${id}`)}
-              >
-                <Text style={styles.detailsButtonText}>Ver Detalhes</Text>
-              </TouchableOpacity>
+              <View style={styles.buyerActions}>
+                <TouchableOpacity 
+                  style={[styles.detailsButton, styles.flex1]}
+                  onPress={() => router.push(`/buyer-details/${buyer.id}?eventId=${id}`)}
+                >
+                  <Text style={styles.detailsButtonText}>Ver Detalhes</Text>
+                </TouchableOpacity>
+                {!buyer.isValidated && (
+                  <TouchableOpacity
+                    testID={`validate-${buyer.id}`}
+                    style={[styles.validateButton, styles.flex1]}
+                    disabled={validatingId === buyer.id}
+                    onPress={() => confirmValidation(buyer)}
+                  >
+                    {validatingId === buyer.id ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <UserCheck size={16} color="#fff" />
+                        <Text style={styles.detailsButtonText}>Validar entrada</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -650,5 +664,33 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     gap: 16,
+  },
+  flex1: {
+    flex: 1,
+  },
+  validateButton: {
+    backgroundColor: '#28A745',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: 'bold' as const,
+    color: '#fff',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    paddingHorizontal: 24,
   },
 });

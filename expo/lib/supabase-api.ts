@@ -2477,7 +2477,19 @@ export const analyticsApi = {
         .eq('id', input.eventId)
         .single();
 
-      const ticketTypes: any[] = Array.isArray(event?.ticket_types) ? event.ticket_types : [];
+      let ticketTypes: any[] = [];
+      const rawTypes: unknown = event?.ticket_types;
+      if (Array.isArray(rawTypes)) {
+        ticketTypes = rawTypes;
+      } else if (typeof rawTypes === 'string') {
+        try {
+          let parsed: unknown = JSON.parse(rawTypes);
+          if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+          if (Array.isArray(parsed)) ticketTypes = parsed;
+        } catch {
+          ticketTypes = [];
+        }
+      }
       const typeById = new Map<string, any>();
       ticketTypes.forEach((t: any, idx: number) => {
         typeById.set(t.id || `tt-${event?.id ?? input.eventId}-${idx}`, {
@@ -2488,11 +2500,22 @@ export const analyticsApi = {
         });
       });
 
-      const { data: tickets, error } = await supabase
-        .from('tickets')
-        .select('id, user_id, ticket_type_id, quantity, price, is_used, validated_at, purchase_date, qr_code, users(name, email, phone)')
-        .eq('event_id', input.eventId)
-        .order('purchase_date', { ascending: false });
+      // Compradores via RPC (SECURITY DEFINER): só o promotor do evento ou um admin
+      // recebem nome/email/telefone — a RLS de users não o permite diretamente.
+      const { data: buyerRows, error } = await supabase.rpc('event_buyers', { p_event_id: input.eventId });
+      const tickets: any[] = (Array.isArray(buyerRows) ? buyerRows : []).map((b: any) => ({
+        id: b.id,
+        user_id: b.userId,
+        ticket_type_id: b.ticketTypeId,
+        quantity: b.quantity,
+        price: Number(b.price) || 0,
+        is_used: b.isUsed,
+        validated_at: b.validatedAt,
+        purchase_date: b.purchaseDate,
+        qr_code: b.qrCode,
+        type_name: b.ticketType,
+        users: { name: b.name, email: b.email, phone: b.phone },
+      }));
 
       if (error) {
         console.error('[analyticsApi.eventStats] Supabase error:', error.message);
@@ -2506,7 +2529,7 @@ export const analyticsApi = {
       const typeStats = new Map<string, { ticketTypeId: string; name: string; unitPrice: number; sold: number; revenue: number; commission: number; available: number }>();
 
       const buyers = (tickets || []).map((t: any) => {
-        const typeName = typeById.get(t.ticket_type_id)?.name || 'Bilhete';
+        const typeName = typeById.get(t.ticket_type_id)?.name || t.type_name || 'Bilhete';
         const unitPrice = t.price || 0;
         const quantity = t.quantity || 0;
         const lineRevenue = unitPrice * quantity;
@@ -2568,6 +2591,22 @@ export const analyticsApi = {
       console.error('[analyticsApi.eventStats] error:', err);
       return empty;
     }
+  },
+
+  /**
+   * Compras de um comprador nos eventos do promotor autenticado.
+   */
+  buyerHistory: async (input: { userId: string }): Promise<{
+    ticketId: string; eventId: string; eventTitle: string; eventDate: string;
+    quantity: number; price: number; isUsed: boolean; purchaseDate: string;
+  }[]> => {
+    if (!input?.userId) return [];
+    const { data, error } = await supabase.rpc('promoter_buyer_history', { p_user_id: input.userId });
+    if (error) {
+      console.error('[analyticsApi.buyerHistory] error:', error.message);
+      return [];
+    }
+    return Array.isArray(data) ? data : [];
   },
 
   /**
