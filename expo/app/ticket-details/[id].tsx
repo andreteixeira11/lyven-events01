@@ -36,7 +36,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/theme-context';
 import { useUser } from '@/hooks/user-context';
-import { api, ticketsApi } from '@/lib/api';
+import { api, ticketsApi, walletApi } from '@/lib/api';
 import { sendEmail } from '@/lib/email';
 import { LoadingSpinner, ErrorState } from '@/components/LoadingStates';
 import { handleError } from '@/lib/error-handler';
@@ -67,6 +67,7 @@ export default function TicketDetailsScreen() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [refundModalVisible, setRefundModalVisible] = useState(false);
+  const [addingToWallet, setAddingToWallet] = useState(false);
 
   // Fetch the real ticket from Supabase
   const { data: ticketData, isLoading, error } = api.tickets.get.useQuery(
@@ -170,12 +171,20 @@ export default function TicketDetailsScreen() {
     }
   };
 
+  /** Gera o passe Apple Wallet do bilhete visível e abre-o (iOS mostra "Adicionar à Apple Wallet"). */
   const handleAddToWallet = async () => {
-    Alert.alert(
-      'Apple Wallet',
-      'Esta funcionalidade estará disponível em breve. Poderá adicionar o seu bilhete à Apple Wallet ou Google Pay.',
-      [{ text: 'OK' }]
-    );
+    const ticketId = tickets[currentIndex]?.id ?? String(id ?? '');
+    if (!ticketId || addingToWallet) return;
+    setAddingToWallet(true);
+    try {
+      const url = await walletApi.getPassUrl(ticketId);
+      await Linking.openURL(url);
+    } catch (err) {
+      console.error('Erro ao adicionar à wallet:', err);
+      Alert.alert('Erro', 'Não foi possível adicionar o bilhete à Apple Wallet. Tente novamente.', [{ text: 'OK' }]);
+    } finally {
+      setAddingToWallet(false);
+    }
   };
 
   const handleAddToCalendar = async () => {
@@ -450,15 +459,22 @@ export default function TicketDetailsScreen() {
             ))}
           </View>
 
-          <TouchableOpacity 
-            style={[styles.walletButton, { backgroundColor: '#000000' }]}
-            onPress={handleAddToWallet}
-          >
-            <Wallet size={20} color="#FFFFFF" strokeWidth={2.5} />
-            <Text style={styles.walletButtonText}>
-              Adicionar à Apple Wallet
-            </Text>
-          </TouchableOpacity>
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity 
+              style={[styles.walletButton, { backgroundColor: '#000000', opacity: addingToWallet ? 0.7 : 1 }]}
+              onPress={handleAddToWallet}
+              disabled={addingToWallet}
+            >
+              {addingToWallet ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Wallet size={20} color="#FFFFFF" strokeWidth={2.5} />
+              )}
+              <Text style={styles.walletButtonText}>
+                {addingToWallet ? 'A abrir...' : 'Adicionar à Apple Wallet'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <View style={[styles.section, { backgroundColor: colors.card }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Data e horário</Text>
