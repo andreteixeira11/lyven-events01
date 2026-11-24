@@ -1059,13 +1059,21 @@ export const ticketsApi = {
   },
 
   /** Transfere bilhetes para outra conta (por email) via edge function — o servidor valida tudo. */
-  transfer: async (input: { ticketIds: string[]; toEmail: string }): Promise<{ success: boolean }> => {
+  transfer: async (input: { ticketIds: string[]; toEmail: string }): Promise<{ success: boolean; hasAccount: boolean; emailSent: boolean }> => {
     const { data, error } = await supabase.functions.invoke('transfer-ticket', {
       body: { ticketIds: input.ticketIds, toEmail: input.toEmail },
     });
-    if (error) throw new Error(error.message ?? 'Erro ao transferir os bilhetes');
+    if (error) {
+      // Mostra a mensagem real do servidor em vez de "non-2xx status code"
+      let message = error.message ?? 'Erro ao transferir os bilhetes';
+      try {
+        const body = await (error as any).context?.json?.();
+        if (body?.error) message = body.error;
+      } catch {}
+      throw new Error(message);
+    }
     if (data?.error) throw new Error(data.error);
-    return { success: true };
+    return { success: true, hasAccount: !!data?.hasAccount, emailSent: !!data?.emailSent };
   },
 
   create: async (input: any): Promise<any> => {
@@ -1150,10 +1158,16 @@ export const ticketsApi = {
 
   list: async (input: { userId: string }): Promise<any[]> => {
     try {
+      // Bilhetes transferidos para este email antes de a conta existir passam agora para ela
+      try {
+        await supabase.rpc('claim_my_pending_tickets');
+      } catch {}
+
       const { data, error } = await supabase
         .from('tickets')
         .select('*')
         .eq('user_id', input.userId)
+        .is('pending_transfer_email', null)
         .order('purchase_date', { ascending: false });
 
       if (error || !data) return [];

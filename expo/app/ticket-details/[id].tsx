@@ -34,6 +34,7 @@ import {
 } from 'lucide-react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/hooks/theme-context';
 import { useUser } from '@/hooks/user-context';
 import { api, ticketsApi, walletApi } from '@/lib/api';
@@ -60,6 +61,7 @@ export default function TicketDetailsScreen() {
   const { colors, isDark } = useTheme();
   const { user } = useUser();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [transferModalVisible, setTransferModalVisible] = useState(false);
@@ -318,12 +320,19 @@ export default function TicketDetailsScreen() {
           onPress: async () => {
             setIsTransferring(true);
             try {
-              await ticketsApi.transfer({ ticketIds, toEmail: email });
+              const result = await ticketsApi.transfer({ ticketIds, toEmail: email });
               setTransferModalVisible(false);
               setTransferEmail('');
+              queryClient.invalidateQueries({ queryKey: ['tickets'] });
+              const emailNote = result.emailSent
+                ? ' Enviámos o bilhete com o código QR para esse email.'
+                : ' Não foi possível enviar o email, mas o bilhete já pertence ao destinatário.';
+              const accountNote = result.hasAccount
+                ? ''
+                : ' Quando criar conta na Lyven com esse email, o bilhete aparece também na app.';
               Alert.alert(
-                'Sucesso',
-                `Bilhete(s) transferidos para ${email}. O destinatário recebeu um email.`,
+                'Bilhete transferido',
+                `Transferido para ${email}.${emailNote}${accountNote}`,
                 [{ text: 'OK', onPress: () => router.back() }]
               );
             } catch (err: any) {

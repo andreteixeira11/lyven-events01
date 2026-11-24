@@ -36,7 +36,7 @@ const faqData: FAQItem[] = [
   {
     id: '4',
     question: 'Posso transferir bilhetes para outra pessoa?',
-    answer: 'Sim, pode transferir bilhetes através da aplicação. Aceda ao bilhete desejado e selecione a opção "Transferir". A pessoa receberá uma notificação para aceitar a transferência.',
+    answer: 'Sim, pode transferir bilhetes através da aplicação. Aceda ao bilhete desejado e selecione a opção "Transferir". A pessoa recebe o bilhete com o código QR por email, mesmo sem conta na Lyven; ao criar conta com esse email, o bilhete aparece também na app.',
   },
   {
     id: '5',

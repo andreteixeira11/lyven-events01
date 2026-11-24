@@ -12,7 +12,7 @@
 //                → push vazio pela APNs para cada iPhone com passes do evento.
 import forge from "npm:node-forge@1.3.1";
 import { zipSync, strToU8 } from "npm:fflate@0.8.2";
-import { ICON_29, ICON_58, ICON_87, WWDR_CERT } from "./assets.ts";
+import { ICON_29, ICON_58, ICON_87, LOGO_1X, LOGO_2X, LOGO_3X, WWDR_CERT } from "./assets.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -229,10 +229,11 @@ function buildPassJson(ticket: TicketData, event: EventData, typeName: string, h
     webServiceURL: WEB_SERVICE_URL,
     authenticationToken: authToken,
     sharingProhibited: true,
-    backgroundColor: "rgb(26, 26, 46)",
+    // Cores da marca: turquesa do logotipo (#0099A8) com texto branco
+    backgroundColor: "rgb(0, 153, 168)",
     foregroundColor: "rgb(255, 255, 255)",
-    labelColor: "rgb(151, 158, 189)",
-    logoText: "Lyven",
+    labelColor: "rgb(204, 240, 243)",
+    logoText: "LYVEN",
     relevantDate: eventDate.toISOString(),
     expirationDate: new Date(endDate.getTime() + 6 * 3600 * 1000).toISOString(),
     eventTicket: {
@@ -279,6 +280,9 @@ async function buildPkpass(passJson: string): Promise<Uint8Array> {
     "icon.png": b64ToU8(ICON_29),
     "icon@2x.png": b64ToU8(ICON_58),
     "icon@3x.png": b64ToU8(ICON_87),
+    "logo.png": b64ToU8(LOGO_1X),
+    "logo@2x.png": b64ToU8(LOGO_2X),
+    "logo@3x.png": b64ToU8(LOGO_3X),
   };
 
   const manifest: Record<string, string> = {};
