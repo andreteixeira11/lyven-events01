@@ -103,8 +103,14 @@ function signManifest(manifestJson: string): Uint8Array {
   p7.addSigner({
     key: signerKey,
     certificate: signerCert,
-    digestAlgorithm: forge.pki.oids.sha1,
-    authenticatedAttributes: [],
+    // O iOS exige atributos assinados (contentType, messageDigest e signingTime);
+    // sem eles o Wallet rejeita o passe em silêncio.
+    digestAlgorithm: forge.pki.oids.sha256,
+    authenticatedAttributes: [
+      { type: forge.pki.oids.contentType, value: forge.pki.oids.data },
+      { type: forge.pki.oids.messageDigest },
+      { type: forge.pki.oids.signingTime, value: new Date() as unknown as string },
+    ],
   });
   p7.sign({ detached: true });
 
