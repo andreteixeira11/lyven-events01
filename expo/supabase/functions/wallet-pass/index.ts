@@ -302,7 +302,9 @@ function pkpassResponse(pkpass: Uint8Array, updatedAt: Date): Response {
   return new Response(pkpass, {
     headers: {
       "Content-Type": "application/vnd.apple.pkpass",
-      "Content-Disposition": 'attachment; filename="bilhete-lyven.pkpass"',
+      // "inline" é essencial: com "attachment" o Safari só descarrega o ficheiro e
+      // nunca mostra a antevisão do passe com o botão "Adicionar à Apple Wallet".
+      "Content-Disposition": 'inline; filename="bilhete-lyven.pkpass"',
       "Last-Modified": updatedAt.toUTCString(),
       ...CORS_HEADERS,
     },
