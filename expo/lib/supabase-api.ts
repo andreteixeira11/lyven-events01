@@ -3016,6 +3016,43 @@ export const walletApi = {
   },
 };
 
+/** Stripe Connect — liga a conta Stripe do promotor e paga-lhe as vendas diretamente. */
+export interface StripeConnectStatus {
+  connected: boolean;
+  chargesEnabled: boolean;
+  detailsSubmitted: boolean;
+  pendingCents: number;
+  accountId: string | null;
+}
+
+async function connectInvoke<T>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke('stripe-connect', { body });
+  if (error) {
+    let message = error.message ?? 'Erro do servidor';
+    try {
+      const parsed = await (error as any).context?.json?.();
+      if (parsed?.error) message = parsed.error;
+    } catch {}
+    throw new Error(message);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data as T;
+}
+
+export const connectApi = {
+  /** Abre (ou retoma) o onboarding do Stripe e devolve o URL. */
+  start: async (): Promise<{ url: string; accountId: string }> =>
+    connectInvoke<{ url: string; accountId: string }>({ action: 'start' }),
+
+  /** Estado da conta Stripe do promotor e vendas ainda não transferidas. */
+  status: async (): Promise<StripeConnectStatus> =>
+    connectInvoke<StripeConnectStatus>({ action: 'status' }),
+
+  /** Transfere as vendas pendentes para a conta do promotor. */
+  payout: async (): Promise<{ transferred: number; failed: number; remainingCents: number }> =>
+    connectInvoke<{ transferred: number; failed: number; remainingCents: number }>({ action: 'payout' }),
+};
+
 export const emailsApi = {
   sendTest: async (_input: any): Promise<{ success: boolean }> => {
     console.log('[emailsApi.sendTest] Email sending requires Supabase Edge Functions');

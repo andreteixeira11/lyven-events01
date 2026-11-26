@@ -8,6 +8,8 @@ import {
   Dimensions,
   ActivityIndicator,
   RefreshControl,
+  Linking,
+  Alert,
 } from 'react-native';
 import {
   TrendingUp,
@@ -19,8 +21,9 @@ import {
   Target,
   Percent,
   Wallet,
+  CreditCard,
 } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { EventImage } from '@/components/EventImage';
 import { useUser } from '@/hooks/user-context';
 import { useTheme } from '@/hooks/theme-context';
@@ -75,13 +78,54 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
 
   const [refreshing, setRefreshing] = React.useState<boolean>(false);
 
+  // Stripe Connect — receber vendas diretamente na conta do promotor
+  const {
+    data: connectStatus,
+    refetch: refetchConnect,
+  } = api.connect.status.useQuery(undefined, {
+    enabled: !!user?.id && user?.userType === 'promoter',
+  });
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Ao voltar do onboarding no browser, atualiza o estado da conta
+      refetchConnect();
+    }, [refetchConnect])
+  );
+
+  const startConnect = api.connect.start.useMutation({
+    onSuccess: (data: { url: string; accountId: string }) => {
+      Linking.openURL(data.url).catch(() =>
+        Alert.alert('Erro', 'Não foi possível abrir o Stripe. Tenta novamente.')
+      );
+    },
+    onError: (err: Error) => Alert.alert('Erro', err.message),
+  });
+
+  const requestPayout = api.connect.payout.useMutation({
+    onSuccess: (data: { transferred: number; failed: number; remainingCents: number }) => {
+      refetchConnect();
+      Alert.alert(
+        'Transferência iniciada',
+        data.failed === 0
+          ? `${data.transferred} transferência(s) em curso. O valor chega à tua conta Stripe assim que os pagamentos ficarem disponíveis (normalmente em alguns dias).`
+          : `${data.transferred} transferência(s) iniciada(s), ${data.failed} falharam. Tenta novamente mais tarde.`
+      );
+    },
+    onError: (err: Error) => Alert.alert('Erro', err.message),
+  });
+
+  const connectConnected = !!connectStatus?.connected;
+  const connectReady = connectConnected && connectStatus?.chargesEnabled && connectStatus?.detailsSubmitted;
+  const pendingEuros = ((connectStatus?.pendingCents ?? 0) / 100).toFixed(2).replace('.', ',');
+
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      await Promise.all([refetch(), refetchRevenue()]);
+      await Promise.all([refetch(), refetchRevenue(), refetchConnect()]);
     } catch {}
     setRefreshing(false);
-  }, [refetch, refetchRevenue]);
+  }, [refetch, refetchRevenue, refetchConnect]);
 
   const events = eventsData ?? [];
   const stats = statsData ?? {
@@ -229,6 +273,62 @@ const PromoterDashboard: React.FC<PromoterDashboardProps> = ({ promoterId: _prom
               <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Seguidores</Text>
               <Text style={[styles.summaryValue, { color: colors.text }]}>{formatNumber(stats.followersCount)}</Text>
             </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Receber vendas</Text>
+          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+            <View style={styles.stripeHeader}>
+              <CreditCard size={20} color={colors.primary} />
+              <Text style={[styles.stripeTitle, { color: colors.text }]}>
+                {connectReady
+                  ? 'Conta Stripe ligada'
+                  : connectConnected
+                  ? 'Configuração em curso'
+                  : 'Recebe as vendas diretamente no Stripe'}
+              </Text>
+            </View>
+            <Text style={[styles.stripeDescription, { color: colors.textSecondary }]}>
+              {connectReady
+                ? 'Cada venda vai automaticamente para a tua conta Stripe; a Lyven fica apenas com a taxa de serviço.'
+                : 'Liga a tua conta Stripe (gratuito, leva alguns minutos) para receber o valor dos bilhetes diretamente na tua conta. A Lyven fica apenas com a taxa de serviço.'}
+            </Text>
+            {connectReady && (
+              <View style={styles.stripeRow}>
+                <Text style={[styles.stripeLabel, { color: colors.textSecondary }]}>Por transferir</Text>
+                <Text style={[styles.stripeValue, { color: colors.text }]}>{formatCurrency(Number(pendingEuros))}</Text>
+              </View>
+            )}
+            {connectReady ? (
+              Number(pendingEuros) > 0 && (
+                <TouchableOpacity
+                  style={[styles.stripeButton, { backgroundColor: colors.primary }]}
+                  onPress={() => requestPayout.mutate(undefined)}
+                  disabled={requestPayout.isPending}
+                >
+                  {requestPayout.isPending ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.stripeButtonText}>Transferir agora</Text>
+                  )}
+                </TouchableOpacity>
+              )
+            ) : (
+              <TouchableOpacity
+                style={[styles.stripeButton, { backgroundColor: colors.primary }]}
+                onPress={() => startConnect.mutate(undefined)}
+                disabled={startConnect.isPending}
+              >
+                {startConnect.isPending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.stripeButtonText}>
+                    {connectConnected ? 'Continuar configuração' : 'Ligar conta Stripe'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -450,6 +550,47 @@ const styles = StyleSheet.create({
   },
   summaryDivider: {
     height: 1,
+  },
+  stripeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  stripeTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    marginLeft: 8,
+  },
+  stripeDescription: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  stripeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  stripeLabel: {
+    fontSize: 14,
+  },
+  stripeValue: {
+    fontSize: 17,
+    fontWeight: '700' as const,
+  },
+  stripeButton: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    minHeight: 44,
+  },
+  stripeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700' as const,
   },
   adsCard: {
     borderRadius: 16,

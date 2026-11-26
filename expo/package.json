@@ -27,7 +27,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.2.1",
     "@react-native-community/netinfo": "12.0.1",
-    "@rork-ai/toolkit-sdk": "0.4.3",
+    "@rork-ai/toolkit-sdk": "0.4.5",
     "@stardazed/streams-text-encoding": "^1.0.2",
     "@supabase/supabase-js": "^2.94.0",
     "@tanstack/eslint-plugin-query": "^5.91.2",

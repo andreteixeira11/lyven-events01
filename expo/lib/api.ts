@@ -10,6 +10,7 @@ import {
   paymentMethodsApi,
   stripeApi,
   walletApi,
+  connectApi,
   emailsApi,
   exampleApi,
   analyticsApi,
@@ -25,7 +26,7 @@ import {
 } from './supabase-api';
 import React from 'react';
 
-export { walletApi, ticketsApi };
+export { walletApi, ticketsApi, connectApi };
 
 function createQueryHook<TInput, TOutput>(
   key: string[],
@@ -182,6 +183,11 @@ export const api = {
   },
   emails: {
     sendTest: createMutationHook(emailsApi.sendTest),
+  },
+  connect: {
+    status: createQueryHook(['connect', 'status'], connectApi.status),
+    start: createMutationHook(connectApi.start),
+    payout: createMutationHook(connectApi.payout),
   },
   webhooks: {
     createEvent: createMutationHook(webhooksApi.createEvent),
@@ -380,6 +386,11 @@ export const apiClient = {
   },
   emails: {
     sendTest: { mutate: emailsApi.sendTest },
+  },
+  connect: {
+    status: { query: connectApi.status },
+    start: { mutate: connectApi.start },
+    payout: { mutate: connectApi.payout },
   },
   webhooks: {
     createEvent: { mutate: webhooksApi.createEvent },

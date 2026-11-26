@@ -44,6 +44,76 @@ async function restInsert(table: string, rows: unknown[]) {
   return res.json().catch(() => null);
 }
 
+/**
+ * Transfere o valor dos bilhetes (sem a taxa de serviço) para a conta Stripe
+ * Connect do promotor. source_transaction prende a transferência ao carregamento:
+ * executa quando os fundos ficam disponíveis. Sem conta pronta, os bilhetes
+ * ficam por transferir e o promotor recebe-os via "payout" (stripe-connect)
+ * depois de ligar a conta. Falhas ficam registadas e são retentáveis aí.
+ */
+async function transferToPromoters(session: any, items: ValidatedItem[], ticketRows: any[]) {
+  const paymentIntentId = session.payment_intent;
+  if (!paymentIntentId) return;
+  const pi = await stripe.paymentIntents.retrieve(String(paymentIntentId)).catch(() => null);
+  const chargeId = typeof pi?.latest_charge === "string" ? pi.latest_charge : pi?.latest_charge?.id ?? null;
+  if (!chargeId) {
+    console.error("[stripe-webhook] sem charge para transferir, sessão:", session.id);
+    return;
+  }
+
+  // Agrupa por evento (cada evento → um promotor)
+  const byEvent = new Map<string, number>();
+  for (const item of items) {
+    byEvent.set(item.eventId, (byEvent.get(item.eventId) ?? 0) + Math.round(item.price * item.quantity * 100));
+  }
+
+  for (const [eventId, amountCents] of byEvent) {
+    if (amountCents <= 0) continue;
+    try {
+      const evRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/events?select=id,promoter_id&id=eq.${encodeURIComponent(eventId)}`,
+        { headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY } },
+      );
+      const event = (await evRes.json())[0];
+      if (!event?.promoter_id) continue;
+
+      const profRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/promoter_profiles?select=stripe_account_id,stripe_charges_enabled&user_id=eq.${encodeURIComponent(event.promoter_id)}&limit=1`,
+        { headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY } },
+      );
+      const profile = (await profRes.json())[0];
+      if (!profile?.stripe_account_id || !profile.stripe_charges_enabled) continue;
+
+      const transfer = await stripe.transfers.create({
+        amount: amountCents,
+        currency: "eur",
+        destination: profile.stripe_account_id,
+        source_transaction: chargeId,
+        metadata: { eventId, sessionId: session.id },
+      });
+
+      const ticketIds = ticketRows.filter((t) => t.event_id === eventId).map((t) => t.id);
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/tickets?id=in.(${encodeURIComponent(ticketIds.map((id) => `"${id}"`).join(","))})&stripe_transfer_id=is.null`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+            apikey: SERVICE_ROLE_KEY,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({ stripe_transfer_id: transfer.id, transferred_at: new Date().toISOString() }),
+        },
+      );
+      console.log("[stripe-webhook] transferido", transfer.id, eventId, amountCents);
+    } catch (err: any) {
+      // Não crítico: o promotor pode receber mais tarde via "Receber vendas"
+      console.error("[stripe-webhook] transfer falhou (retentável):", err?.message);
+    }
+  }
+}
+
 async function ticketsExistForSession(sessionId: string): Promise<boolean> {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/tickets?stripe_session_id=eq.${encodeURIComponent(sessionId)}&select=id&limit=1`,
@@ -159,6 +229,13 @@ async function fulfillSession(session: any) {
     console.error("[stripe-webhook] email de bilhetes falhou (não crítico):", err?.message);
   }
 
+  // Transferir a parte do promotor (Stripe Connect), se já tiver conta ligada.
+  try {
+    await transferToPromoters(session, items, ticketRows);
+  } catch (err: any) {
+    console.error("[stripe-webhook] transferToPromoters falhou (não crítico):", err?.message);
+  }
+
   console.log("[stripe-webhook] bilhetes emitidos para sessão:", sessionId, ticketRows.length);
 }
 
@@ -191,6 +268,26 @@ Deno.serve(async (req) => {
       if (session.payment_status === "paid") {
         await fulfillSession(session);
       }
+    } else if (event.type === "account.updated") {
+      // Estado do onboarding Stripe Connect de um promotor
+      const account = event.data.object;
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/promoter_profiles?stripe_account_id=eq.${encodeURIComponent(account.id)}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+            apikey: SERVICE_ROLE_KEY,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({
+            stripe_charges_enabled: account.charges_enabled ?? false,
+            stripe_details_submitted: account.details_submitted ?? false,
+            stripe_payouts_enabled: account.payouts_enabled ?? false,
+          }),
+        },
+      );
     }
     // async_payment_failed: o pagamento Multibanco/MB WAY expirou — nada a fazer,
     // os bilhetes simplesmente não são emitidos.
